@@ -1,0 +1,166 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>Thống kê số lượt like và số lượt comment</h1>
+<ul>
+    {% for c in stats %}
+    <li><strong>{{ c.name }}</strong>: {{c.count1}}</li>
+    {% endfor %}
+</ul>
+<div>
+    <label for="year">Year:</label>
+    <input type="number" id="year" name="year" >
+
+    <label for="month">Month:</label>
+    <select id="month" name="month" onclick="checkYear()">
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+    </select>
+
+    <button onclick="updateCharts()">Update Charts</button>
+</div>
+<div style="display: flex; posi">
+    <div style="width: 800px; border: 1px solid; padding: 40px;">
+        <canvas id="ChartLike"></canvas>
+    </div>
+    <div style="width: 800px; ">
+        <canvas id="ChartCmm" width="500px"></canvas>
+    </div>
+</div>
+<div style="width: 800px; ">
+        <canvas id="ChartAuction" width="500px"></canvas>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    function updateCharts() {
+        let enteredYear = document.getElementById('year').value;
+        let enteredMonth = document.getElementById('month').value;
+
+        let url = `http://127.0.0.1:8000/admin/auction-stats/?year=${enteredYear}&month=${enteredMonth}`
+        window.location.href = url;
+
+    }
+    function checkYear() {
+        let enteredYear = document.getElementById('year');
+        let enteredMonth = document.getElementById('month');
+
+        if(!enteredYear.value){
+            alert('Vui lòng chọn năm trước khi chọn tháng.')
+            monthSelect.blur();
+        }
+    }
+    let labels1 = [];
+    let values1 = [];
+    {% for c in stats_Cmm %}
+    values1.push({{ c.count2 }})
+    labels1.push('{{ c.name }}')
+    {% endfor %}
+
+    let labels = [];
+    let values = [];
+    {% for c in stats_Like %}
+    values.push({{ c.count1 }})
+    labels.push('{{ c.name }}')
+    {% endfor %}
+
+    let labels2 = [];
+    let values2 = [];
+    {% for c in stats_Auction %}
+    values2.push({{ c.count3 }})
+    labels2.push('{{ c.name }}')
+    {% endfor %}
+
+    window.onload = () => {
+        const ctxLike = document.getElementById('ChartLike');
+
+
+      new Chart(ctxLike, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Số lượng like",
+            data: values,
+            borderWidth: 1,
+            backgroundColor: [
+              'rgb(255, 99, 132)',
+              'rgb(54, 162, 235)',
+              'rgb(255, 205, 86)'
+            ]
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+        const ctxCmm = document.getElementById('ChartCmm');
+
+
+        new Chart(ctxCmm, {
+            type: 'bar',
+            data: {
+              labels: labels1,
+              datasets: [{
+                label: "Số lượng comments",
+                data: values1,
+                borderWidth: 1,
+                backgroundColor: [
+                  'rgb(255, 99, 132)',
+                  'rgb(54, 162, 235)',
+                  'rgb(255, 205, 86)'
+                ]
+              }]
+            },
+            options: {
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+
+          const ctxAuction = document.getElementById('ChartAuction');
+
+
+      new Chart(ctxAuction, {
+        type: 'bar',
+        data: {
+          labels: labels2,
+          datasets: [{
+            label: "Số lượng bài đấu giá",
+            data: values2,
+            borderWidth: 1,
+            backgroundColor: [
+              'rgb(255, 99, 132)',
+              'rgb(54, 162, 235)',
+              'rgb(255, 205, 86)'
+            ]
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+        }
+</script>
+
+{% endblock %}
