@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-5ozb-e_0h7ucbet!niy025d#toci%g61&$77-5*+s3_y+@64nz
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -59,7 +59,7 @@ cloudinary.config(
     api_secret="1CExekjHALzqnQGG7Hr-FoOWlk8"
 )
 
-CKEDITOR_UPLOAD_PATH = "ckeditor/images/"
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -103,7 +103,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'socialdb',
         'USER': 'root',
-        'PASSWORD': 'an01697769522',
+        'PASSWORD': '123456@Vi',
         'HOST': ''  # mặc định localhost
     }
 }

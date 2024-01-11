@@ -1,6 +1,5 @@
-from socialnetworks.models import Category, Product, User, Auction, ParticipateAuction, Post, Report, ReportType, Notice, Hashtag, LikeType, Like, Comments
+from socialnetworks.models import Category, Product, User, Auction, ParticipateAuction, Post, Report, ReportType, Notice, Hashtag, LikeType, Like, Comments,Images
 from rest_framework import serializers
-
 
 
 class HashtagSerializer(serializers.ModelSerializer):
@@ -9,8 +8,17 @@ class HashtagSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 
+# Tạo bài viết
+class CreatePostSerializer(serializers.ModelSerializer):
+    # post_hashtags = HashtagSerializer(many=True, required=False)
+    class Meta:
+        model = Post
+        fields = ['content', 'user', 'post_hashtag']
+
+
 class PostSerializer(serializers.ModelSerializer):
     post_hashtag = HashtagSerializer(many=True)
+
     class Meta:
         model = Post
         fields = '__all__'
@@ -52,3 +60,9 @@ class UserSerialzier(serializers.ModelSerializer):
         user.save()
 
         return user
+
+
+class ImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Images
+        fields = '__all__'

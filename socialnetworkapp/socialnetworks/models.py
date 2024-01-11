@@ -56,9 +56,9 @@ class ParticipateAuction(BaseModel):
 
 class Post(BaseModel):
     content = RichTextField(null=True)
-    image = models.ImageField(upload_to="posts/%Y/%m")
+    # image = models.ImageField(upload_to="posts/%Y/%m", null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    post_hashtag = models.ManyToManyField('Hashtag')
+    post_hashtag = models.ManyToManyField('Hashtag', null=True)
 
 
 class ReportType(BaseModel):
@@ -82,10 +82,11 @@ class Notice(BaseModel):
 
 
 class Hashtag(BaseModel):
-    name = models.CharField(max_length=100, null=False)
+    name = models.CharField(max_length=100, null=False, unique=True)
 
     def __str__(self):
         return self.name
+
 
 
 class LikeType(BaseModel):
@@ -107,6 +108,11 @@ class Comments(BaseModel):
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     comment = models.ForeignKey('Comments', on_delete=models.CASCADE)
+
+
+class Images(BaseModel):
+    image = CloudinaryField('image', null=True)
+    post = models.ForeignKey('Post', on_delete=models.RESTRICT)
 
 
 
