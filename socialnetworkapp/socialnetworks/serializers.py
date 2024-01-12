@@ -13,11 +13,12 @@ class CreatePostSerializer(serializers.ModelSerializer):
     # post_hashtags = HashtagSerializer(many=True, required=False)
     class Meta:
         model = Post
-        fields = ['content', 'user', 'post_hashtag']
+        fields = ['content', 'user']
 
 
 class PostSerializer(serializers.ModelSerializer):
     post_hashtag = HashtagSerializer(many=True)
+    # liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -31,6 +32,7 @@ class AuctionSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    # post = PostSerializer()
     class Meta:
         model = Comments
         fields = '__all__'
@@ -66,3 +68,15 @@ class ImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Images
         fields = '__all__'
+
+
+class LikeTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LikeType
+        fields = ['id', 'name']
+
+
+class NoticeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notice
+        fields = ['id', 'content']

@@ -11,7 +11,8 @@ router.register('auctions', views.AuctionViewSet, basename='auctions')
 router.register('users', views.UserViewSet, basename='users')
 router.register('hashtags', views.HashtagViewSet, basename='hashtags')
 router.register('images', views.ImageViewSet, basename='images')
-
+router.register('comments', views.CommentViewSet, basename='comments')
+router.register('likes', views.LikeViewSet, basename='likes')
 
 urlpatterns = [
     path('', include(router.urls)),

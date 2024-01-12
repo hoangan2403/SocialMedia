@@ -4,9 +4,10 @@ from django.db.models import Count
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets, generics, status, permissions, parsers
+from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
-from socialnetworks.models import Post, Auction, User, Hashtag, Images
+from socialnetworks.models import Post, Auction, User, Hashtag, Images, Comments, Like, LikeType, Notice
 from socialnetworks import serializers, paginators, perms
 from rest_framework.decorators import action
 
@@ -16,7 +17,16 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
     serializer_class = serializers.PostSerializer
     # permission_classes = [perms.OwnerAuthenticated]
 
+    # def get_owner(self):
+    #     if self.action.__eq__('update_post'):
+    #         return [perms.OwnerAuthenticated()]
+
     # pagination_class = paginators.PostPaginator
+    # def get_permissions(self):
+    #     if self.action in ('get_serializer_class', 'add_comment', 'like', 'update_post'):
+    #         return [permissions.IsAuthenticated()]
+    #
+    #     return [permissions.AllowAny()]
 
     def get_queryset(self):
         queries = self.queryset
@@ -35,7 +45,7 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         return self.serializer_class
 
     # add hashtag vào bài viết
-    @action(methods=['POST'], detail=True, name='add_post_hashtag')
+    @action(methods=['POST'], detail=True, name='add_hashtag')
     def add_post_hashtag(self, request, pk):
         post = self.get_object()
         hashtag_list = request.data.get('post_hashtag')
@@ -47,25 +57,53 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         return Response(serializers.PostSerializer(post, context={'request': request}).data)
 
     # cập nhật bài viết
-    @action(methods=['POST'], detail=True, url_path='update')
+    # @swagger_auto_schema(
+    #     operation_description="Update Post",
+    #     manual_parameters=[
+    #         openapi.Parameter(
+    #             name="Authorization",
+    #             in_=openapi.IN_HEADER,
+    #             type=openapi.TYPE_STRING,
+    #             description="Bearer token",
+    #             required=False,
+    #             default="Bearer your_token_here"
+    #         ),
+    #         openapi.Parameter(
+    #             name="content",
+    #             in_=openapi.IN_FORM,
+    #             type=openapi.TYPE_STRING,
+    #             description="Enter the content",
+    #             required=True,
+    #         ),
+    #     ],
+    #     responses={
+    #         200: openapi.Response(
+    #             description="Successful operation",
+    #             examples={
+    #                 'application/json': {
+    #                     'id': 1,
+    #                     'user': 'user',
+    #                     'content': 'updated_content',
+    #                 }
+    #             },
+    #         ),
+    #         400: "Bad Request. Content is required.",
+    #         403: "Forbidden. Authorization token is missing or invalid.",
+    #         404: "Not Found. The specified post does not exist.",
+    #     }
+    # )
+    @action(methods=['PUT'], detail=True, url_path='update')
     def update_post(self, request, pk):
-        post_instance = self.get_object()  # Lấy instance của Post dựa trên pk
+        post_instance = self.get_object()  # Lấy instance của Post dựa trên p
 
-        # Cập nhật thông tin của bài viết từ dữ liệu mới
         post_instance.content = request.data.get('content', post_instance.content)
-        post_instance.image = request.data.get('image', post_instance.image)
-        # post_instance.post_hashtag = request.data.get('post_hashtag', post_instance.post_hashtag)
-        # Bạn cần điều chỉnh các trường khác tương tự cho Post
-
-        # Lưu các thay đổi vào bài viết
         post_instance.save()
 
-        # Serialize bài viết đã được cập nhật và trả về response
         serialized_post = serializers.PostSerializer(post_instance)
         return Response(serialized_post.data, status=status.HTTP_200_OK)
 
     # Cập nhật hashtag theo bài viết
-    @action(methods=['POST'], detail=True, url_path='update_hashtag')
+    @action(methods=['PUT'], detail=True, url_path='update_hashtag')
     def update_post_hashtag(self, request, pk):
         post = self.get_object()
         hashtag_name = request.data.getlist('hashtag_name')
@@ -89,8 +127,8 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
 
         return Response({"message": "Cập nhật tên hashtag thành công"}, status=status.HTTP_200_OK)
 
-    @action(methods=['get'], detail=True)
-    def comments(self, request, pk):
+    @action(methods=['GET'], detail=True)
+    def get_comments(self, request, pk):
         comments = self.get_object().comments_set.all().order_by('-created_date')
 
         # import pdb
@@ -99,15 +137,73 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         return Response(serializers.CommentSerializer(comments, many=True, context={'request': request}).data,
                         status=status.HTTP_200_OK)
 
-    @action(methods=['get'], detail=True)
-    def likes(self, request, pk):
+    # add comment
+    @action(methods=['POST'], detail=True)
+    def add_comment(self, request, pk):
+        user = request.user
+        post = self.get_object()
+        content = request.data.get('content')
+        if user != post.user:
+            if content:
+                c = Comments.objects.create(user=user, post=post, content=content)
+
+                content = f"{request.user.username} đã bình luận bài viết của bạn "
+                n = Notice.objects.create(content=content, post=post)
+                n.save()
+
+                return Response(serializers.CommentSerializer(c).data, status=status.HTTP_201_CREATED)
+            else:
+                return Response("Content is required.", status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['GET'], detail=True)
+    def get_likes(self, request, pk):
         likes = self.get_object().like_set.all()
         return Response(serializers.LikeSerializers(likes, many=True, context={'request': request}).data,
                         status=status.HTTP_200_OK)
 
+    # add like
+    @action(methods=['POST'], url_path='like', detail=True)
+    def like(self, request, pk):
+        like_type = int(request.data.get('liketype_id'))
+        user = request.user
+        post = self.get_object()
+
+        try:
+            like_type_instance = LikeType.objects.get(pk=like_type)
+        except LikeType.DoesNotExist:
+            return Response("Invalid LikeType ID", status=status.HTTP_400_BAD_REQUEST)
+        # breakpoint()
+        # like = Like.objects.filter(user=user, post=post)
+        if user != post.user:
+                like, created = Like.objects.get_or_create(user=user, post=post)
+                if created:
+                    content = f"{request.user.username} đã bày tỏ bài viết của bạn"
+                    n = Notice.objects.create(content=content, post=post)
+                    n.save()
+                    like.like_type = like_type_instance
+                    like.save()
+                    return Response("Like", status=status.HTTP_201_CREATED)
+                else:
+                    if like_type_instance == like.like_type:
+                        like.delete()
+                        return Response("Un Like", status=status.HTTP_204_NO_CONTENT)
+                        # breakpoint()
+                    else:
+                        like.like_type = like_type_instance
+                        like.save()
+                        return Response("Like", status=status.HTTP_200_OK)
+                        # breakpoint()
+        return Response("User Of Post ", status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['GET'], url_path='get_images', detail=True)
+    def get_post_images(self, request, pk):
+        imgs = self.get_object().images_set.all()
+        return Response(serializers.ImageSerializer(imgs, many=True, context={'request': request}).data,
+                        status=status.HTTP_200_OK)
+
 
 class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = Auction.objects.all();
+    queryset = Auction.objects.all()
     serializer_class = serializers.AuctionSerializer
     # pagination_class = paginators.PostPaginator
 
@@ -115,6 +211,7 @@ class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True).all()
     serializer_class = serializers.UserSerialzier
+    permission_classes = [perms.OwnerAuthenticated]
     parser_classes = [parsers.MultiPartParser]
 
     def get_permissions(self):
@@ -137,6 +234,8 @@ class ImageViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Images.objects.all()
     serializer_class = serializers.ImageSerializer
     parser_classes = [parsers.MultiPartParser]
+    # permission_classes = [perms.OwnerAuthenticated]
+
 
     @swagger_auto_schema(
         operation_description="Push Images House",
@@ -171,8 +270,8 @@ class ImageViewSet(viewsets.ViewSet, generics.ListAPIView):
             )
         }
     )
-    @action(methods=['post'], url_name='push-images-for-post', detail=False)
-    def push_images_for_post(self, request):
+    @action(methods=['POST'], url_name='add-images-for-post', detail=False)
+    def add_images_for_post(self, request):
         # user = request.user
         new_images = request.FILES.getlist('image')
         post_id = int(request.data.get('post'))
@@ -183,7 +282,7 @@ class ImageViewSet(viewsets.ViewSet, generics.ListAPIView):
         try:
             post = Post.objects.get(pk=post_id)
         except Post.DoesNotExist:
-            return Response("House does not exist.", status=status.HTTP_400_BAD_REQUEST)
+            return Response("Post does not exist.", status=status.HTTP_400_BAD_REQUEST)
 
         # self.serializer_class().push_images_for_house(house_id, new_image)
         check =False
@@ -197,21 +296,79 @@ class ImageViewSet(viewsets.ViewSet, generics.ListAPIView):
         else:
             return Response('Loi roi', status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['PATCH'], detail=False)
+    @action(methods=['PUT'], detail=False)
     def update_image(self, request):
         # if request.user.is_authenticated and perms.OwnerAuth:
-        imgs_file = request.FILES.getlist('image')
+        imgs_file = request.FILES.getlist('img_file')
         imgs_id = request.data.getlist('img_id')
         post_id = int(request.data.get('post'))
 
+        images = []
         for img_id, img_file in zip(imgs_id, imgs_file):
             image = Images.objects.get(pk=img_id, post=post_id)
             # breakpoint()
             if img_file:
                 image.image = img_file
                 image.save()
-                serializer = serializers.ImageSerializer(image)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                images.append(image)
             else:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = serializers.ImageSerializer(images, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Comments.objects.all()
+    serializer_class = serializers.CommentSerializer
+    # permission_classes = [perms.OwnerAuthenticated]
+
+    @action(methods=['PATCH'], detail=True)
+    def update_comments(self, request, pk):
+        content = request.data.get('content')
+        comment = self.get_object()
+
+        try:
+            comments = Comments.objects.get(pk=comment.id)
+        except Post.DoesNotExist:
+            return Response("Post does not exist.", status=status.HTTP_400_BAD_REQUEST)
+
+        if content:
+            comments.content = content
+            comments.save()
+            serializer = serializers.CommentSerializer(comments)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['POST'], detail=True)
+    def add_reply(self, request, pk):
+        comment = self.get_object()
+        content = request.data.get('content')
+        user = request.user
+
+        comments = Comments.objects.get(pk=comment.id)
+
+        if content:
+            c = Comments.objects.create(content=content, post=comments.post, user=user, comment=comments)
+            c.save()
+            serializer = serializers.CommentSerializer(c)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['GET'], detail=True)
+    def get_reply(self, request, pk):
+        comment = self.get_object()
+
+        c = Comments.objects.filter(comment=comment.id)
+        # breakpoint()
+
+        return Response(serializers.CommentSerializer(c, many=True, context={'request': request}).data, status=status.HTTP_200_OK)
+
+
+class LikeViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Like.objects.all()
+    serializer_class = serializers.LikeSerializers
+    # permission_classes = [perms.OwnerAuthenticated]
 

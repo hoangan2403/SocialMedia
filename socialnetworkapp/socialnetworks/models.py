@@ -58,7 +58,7 @@ class Post(BaseModel):
     content = RichTextField(null=True)
     # image = models.ImageField(upload_to="posts/%Y/%m", null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    post_hashtag = models.ManyToManyField('Hashtag', null=True)
+    post_hashtag = models.ManyToManyField('Hashtag', null=True, related_query_name="hashtag")
 
 
 class ReportType(BaseModel):
@@ -88,31 +88,29 @@ class Hashtag(BaseModel):
         return self.name
 
 
-
 class LikeType(BaseModel):
     name = models.CharField(max_length=100, null=False)
-    icon = models.CharField(max_length=100, null=False)
 
     def __str__(self):
         return self.name
 
 
 class Like(BaseModel):
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_query_name="like")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    like_type = models.ForeignKey(LikeType, on_delete=models.CASCADE)
+    like_type = models.ForeignKey(LikeType, on_delete=models.RESTRICT, null=True)
 
 
 class Comments(BaseModel):
     content = RichTextField(null=True)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_query_name="comments")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    comment = models.ForeignKey('Comments', on_delete=models.CASCADE)
+    comment = models.ForeignKey('Comments', on_delete=models.CASCADE, null=True)
 
 
 class Images(BaseModel):
     image = CloudinaryField('image', null=True)
-    post = models.ForeignKey('Post', on_delete=models.RESTRICT)
+    post = models.ForeignKey('Post', on_delete=models.RESTRICT, related_query_name="images")
 
 
 
