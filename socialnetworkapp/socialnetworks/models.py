@@ -78,7 +78,7 @@ class Report(BaseModel):
 
 class Notice(BaseModel):
     content = RichTextField(null=True)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_query_name="notice")
 
 
 class Hashtag(BaseModel):

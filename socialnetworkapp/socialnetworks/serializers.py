@@ -8,6 +8,12 @@ class HashtagSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 
+class ImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Images
+        fields = '__all__'
+
+
 # Tạo bài viết
 class CreatePostSerializer(serializers.ModelSerializer):
     # post_hashtags = HashtagSerializer(many=True, required=False)
@@ -18,7 +24,6 @@ class CreatePostSerializer(serializers.ModelSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     post_hashtag = HashtagSerializer(many=True)
-    # liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -64,12 +69,6 @@ class UserSerialzier(serializers.ModelSerializer):
         return user
 
 
-class ImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Images
-        fields = '__all__'
-
-
 class LikeTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = LikeType
@@ -80,3 +79,6 @@ class NoticeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notice
         fields = ['id', 'content']
+
+
+

@@ -195,11 +195,45 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
                         # breakpoint()
         return Response("User Of Post ", status=status.HTTP_400_BAD_REQUEST)
 
+    # Lấy hình ảnh theo bài post
     @action(methods=['GET'], url_path='get_images', detail=True)
     def get_post_images(self, request, pk):
         imgs = self.get_object().images_set.all()
         return Response(serializers.ImageSerializer(imgs, many=True, context={'request': request}).data,
                         status=status.HTTP_200_OK)
+
+    # Lấy hết của bài post
+    @action(methods=['GET'], url_path='get_all_in_post', detail=False)
+    def get_all_attribute_in_post(self, request):
+        posts = Post.objects.all()
+        serialized_posts = []
+        for post in posts:
+            images = post.images_set.all()  # Sử dụng related name "images" để lấy tất cả hình ảnh của bài viết
+
+            post_serializer = serializers.PostSerializer(post)
+            image_serializer = serializers.ImageSerializer(images, many=True)
+
+            # Thêm trường images vào dữ liệu serialized của bài viết
+            post_data = post_serializer.data
+            post_data['images'] = image_serializer.data
+
+            serialized_posts.append(post_data)
+
+        return Response(serialized_posts, status=status.HTTP_200_OK)
+
+    # Số lượng like của bài viết
+    @action(methods=['GET'], detail=True, url_path='count_like')
+    def count_like_of_post(self,request,pk):
+        post = self.get_object()
+        count_like = post.like_set.aggregate(count=Count("id"))
+        return Response(count_like, status=status.HTTP_200_OK)
+
+    # Số lượng comment của bài viết
+    @action(methods=['GET'], detail=True, url_path="count_comment")
+    def count_comment_of_post(self, request,pk):
+        post = self.get_object()
+        count_comment = post.comments_set.aggregate(count=Count("id"))
+        return Response(count_comment, status=status.HTTP_200_OK)
 
 
 class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -371,4 +405,21 @@ class LikeViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Like.objects.all()
     serializer_class = serializers.LikeSerializers
     # permission_classes = [perms.OwnerAuthenticated]
+
+
+class NoticeViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Notice.objects.all()
+    serializer_class = serializers.NoticeSerializer
+
+    # lấy thông báo theo user so huu bai viet
+    @action(methods=['GET'], url_path='get_notice', detail=False)
+    def get_notice_of_user(self, request):
+        user = request.user
+        posts = Post.objects.filter(user=user)
+        notices = Notice.objects.filter(post__in=posts)
+
+        serializer = serializers.NoticeSerializer(notices, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 
