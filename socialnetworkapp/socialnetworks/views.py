@@ -7,7 +7,7 @@ from rest_framework import viewsets, generics, status, permissions, parsers
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
-from socialnetworks.models import Post, Auction, User, Hashtag, Images, Comments, Like, LikeType, Notice
+from socialnetworks.models import Post, Auction, User, Hashtag, Images, Comments, Like, LikeType, Notice, Product, Category
 from socialnetworks import serializers, paginators, perms
 from rest_framework.decorators import action
 
@@ -15,6 +15,7 @@ from rest_framework.decorators import action
 class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.DestroyAPIView):
     queryset = Post.objects.filter(active=True).all().order_by('-created_date')
     serializer_class = serializers.PostSerializer
+    # parser_classes = [parsers.MultiPartParser]
     # permission_classes = [perms.OwnerAuthenticated]
 
     # def get_owner(self):
@@ -44,14 +45,45 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
 
         return self.serializer_class
 
-    # add hashtag vào bài viết
-    @action(methods=['POST'], detail=True, name='add_hashtag')
+    @action(methods=['POST'], detail=False, url_path='create')
+    def add_post(self, request):
+        user = request.user
+        content = request.data.get('content')
+        images = request.FILES.getlist('image')
+        hashtags = request.data.getlist('name_hashtag')
+
+        image_data = []
+
+        post, created = Post.objects.get_or_create(content=content, user=user)
+
+        if created:
+            for image in images:
+                new_image = Images.objects.create(image=image, post=post)
+                serializer_img = serializers.ImageSerializer(new_image)
+                image_data.append(serializer_img.data)
+
+            for hashtag in hashtags:
+                new_hashtag, _ = Hashtag.objects.get_or_create(name=hashtag)
+                post.post_hashtag.add(new_hashtag)
+
+            post.save()
+            serializer_post = serializers.PostSerializer(post)
+
+            response_data = {
+                'post': serializer_post.data,
+                'images': image_data,
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'error': 'Post not created'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['POST'], detail=False, url_path='add_hashtag')
     def add_post_hashtag(self, request, pk):
         post = self.get_object()
-        hashtag_list = request.data.get('post_hashtag')
+        hashtag_list = request.data.getlist('name')
         for hastag in hashtag_list:
-            hastag, _ = Hashtag.objects.get_or_create(name=hastag)
-            post.post_hashtag.add(hastag)
+            get_hastag, _ = Hashtag.objects.get_or_create(name=hastag)
+            post.post_hashtag.add(get_hastag)
         post.save()
 
         return Response(serializers.PostSerializer(post, context={'request': request}).data)
@@ -235,11 +267,68 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         count_comment = post.comments_set.aggregate(count=Count("id"))
         return Response(count_comment, status=status.HTTP_200_OK)
 
+    @action(methods=['GET'], detail=False)
+    def get_post_by_user(self, request):
+        user = request.user
+
+        post = Post.objects.filter(user=user)
+
+        serializer = serializers.PostSerializer(post, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Auction.objects.all()
     serializer_class = serializers.AuctionSerializer
+    parser_classes = [parsers.MultiPartParser]
     # pagination_class = paginators.PostPaginator
+
+    @action(methods=['GET'], detail=False)
+    def get_auction_by_user(self, request):
+        user = request.user
+
+        auction = Auction.objects.filter(owner=user)
+
+        serializer = serializers.PostSerializer(auction, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(methods=['POST'], detail=False, url_path='create')
+    def add_auction(self, request):
+        user = request.user
+        content = request.data.get('content')
+        starting_price = request.data.get('starting_price')
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        date_of_payment = request.data.get('date_of_payment')
+
+        name = request.data.get('name_product')
+        description = request.data.get('description_product')
+        image = request.FILES.get('image_product')
+        category = int(request.data.get('category'))
+
+        s =[]
+
+        auction, created = Auction.objects.get_or_create(owner=user, content=content, starting_price=starting_price,
+                                                         start_date=start_date, end_date=end_date, date_of_payment=date_of_payment)
+        # breakpoint()
+        if created:
+            category_id = Category.objects.get(pk=category)
+            new_product = Product.objects.create(name=name, description=description, image=image, category=category_id)
+            serializer_product = serializers.ProductSerializer(new_product)
+
+            auction.product = new_product
+            auction.save()
+
+            serializer_auction = serializers.AuctionSerializer(auction)
+
+            response_data = {
+                'auction': serializer_auction.data,
+                'product': serializer_product.data,
+            }
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        else:
+            return Response('Auction not created', status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -269,7 +358,6 @@ class ImageViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = serializers.ImageSerializer
     parser_classes = [parsers.MultiPartParser]
     # permission_classes = [perms.OwnerAuthenticated]
-
 
     @swagger_auto_schema(
         operation_description="Push Images House",

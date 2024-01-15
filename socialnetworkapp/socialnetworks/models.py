@@ -29,7 +29,7 @@ class Category(BaseModel):
 class Product(BaseModel):
     name = models.CharField(max_length=100, null=False)
     description = RichTextField(null=True)
-    image = models.ImageField(upload_to="products/%Y/%m")
+    image = CloudinaryField('image', null=True)
     category = models.ForeignKey(Category, on_delete=models.RESTRICT, related_query_name='product')
 
     def __str__(self):
@@ -42,10 +42,10 @@ class Auction(models.Model):
     start_date = models.DateField(null=True)
     end_date = models.DateField(null=True)
     date_of_payment = models.DateField(null=True)
-    product = models.ForeignKey(Product, on_delete=models.RESTRICT)
+    product = models.ForeignKey(Product, on_delete=models.RESTRICT, related_query_name='auction', null=True)
     owner = models.ForeignKey(User, related_name='user_of', on_delete=models.CASCADE)
-    buyer = models.ForeignKey(User, related_name='user',on_delete=models.CASCADE)
-    user_care = models.ManyToManyField(User, related_query_name='auction')
+    buyer = models.ForeignKey(User, related_name='user', on_delete=models.CASCADE, null=True)
+    user_care = models.ManyToManyField(User, related_query_name='auction', null=True)
 
 
 class ParticipateAuction(BaseModel):

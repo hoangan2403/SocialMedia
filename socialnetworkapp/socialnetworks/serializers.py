@@ -30,7 +30,14 @@ class PostSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+
 class AuctionSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Auction
         fields = '__all__'
@@ -79,6 +86,8 @@ class NoticeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notice
         fields = ['id', 'content']
+
+
 
 
 
