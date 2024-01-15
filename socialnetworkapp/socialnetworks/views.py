@@ -1,5 +1,7 @@
+import datetime
 from builtins import int
 
+from django.core import mail
 from django.db.models import Count
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -7,9 +9,54 @@ from rest_framework import viewsets, generics, status, permissions, parsers
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
-from socialnetworks.models import Post, Auction, User, Hashtag, Images, Comments, Like, LikeType, Notice, Product, Category
+from socialnetworks.models import Post, Auction, User, Hashtag, Images, Comments, Like, LikeType, Notice, Product, Category, ParticipateAuction
 from socialnetworks import serializers, paginators, perms
 from rest_framework.decorators import action
+
+
+class SendEmailViewSet(viewsets.ViewSet):
+    def create(self, request):
+        auction_id = request.data.get("id_auction")
+        buyer_id = request.data.get("id_buyer")
+
+        try:
+            auction = Auction.objects.get(pk=auction_id, buyer=buyer_id)
+        except Auction.DoesNotExist:
+            return Response({'message': 'Auction not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        buyer_username = auction.buyer.username
+        buyer_email = auction.buyer.email
+        user_of_username = auction.owner.username
+        date_of_payment = auction.date_of_payment
+        link_thanhtoan = 'nhap'  # Replace with your actual link
+        tieude_baiviet = 'nhap'  # Replace with your actual title
+
+        subject = f"{buyer_username} có tin mới !!!"
+        ten_nguoi_gui = buyer_username
+
+        html_content = f"""
+                    <p>Xin chào {ten_nguoi_gui},</p>
+                    <p>Chúng tôi xin thông báo rằng bạn đã chiến thắng cuộc đấu giá. Chúng tôi xin chúc mừng bạn.</p>
+                    <p>Hãy truy cập vào <a href="{link_thanhtoan}">{tieude_baiviet}</a> để thanh toán sản phẩm.</p>
+                    <p>Xin chân thành cảm ơn và hy vọng bạn thanh toán cho chúng tôi trước ngày {date_of_payment}.</p>
+                    <p>Chúc bạn một ngày tốt lành!</p>
+                """
+
+        from_email = "vphan2270@gmail.com"
+        to = [buyer_email]
+
+        try:
+            with mail.get_connection() as connection:
+                msg = mail.EmailMessage(subject, html_content, from_email, to, connection=connection)
+                msg.content_subtype = "html"
+                success_count = msg.send()
+
+            if success_count == 1:
+                return Response({'message': 'Email sent successfully.'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Failed to send email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'message': f'Error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.DestroyAPIView):
@@ -288,7 +335,9 @@ class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
         user = request.user
 
         auction = Auction.objects.filter(owner=user)
-
+        # content = f"{request.user.username} đã bày tỏ bài viết của bạn"
+        # n = Notice.objects.create(content=content, post=post)
+        # n.save()
         serializer = serializers.PostSerializer(auction, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -329,6 +378,45 @@ class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
             return Response(response_data, status=status.HTTP_201_CREATED)
         else:
             return Response('Auction not created', status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['POST'], detail=True)
+    def add_participateauction(self, request, pk):
+        auction = self.get_object()
+        user = request.user
+        price = request.data.get('price')
+        date = datetime.datetime.now()
+        # breakpoint()
+        day = date.strftime("%Y-%m-%d")
+
+        if day > str(auction.end_date):
+            return Response('Auction has already ended', status=status.HTTP_400_BAD_REQUEST)
+        else:
+            participateauction = ParticipateAuction.objects.create(user=user, auction=auction, price=price)
+
+            serializer = serializers.ParticipateAuctionSerializer(participateauction)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(methods=['GET'], detail=True)
+    def get_participateauction(self, request, pk):
+        participateauction = self.get_object().participateauction_set.all().order_by('-price')
+
+        return Response(serializers.ParticipateAuctionSerializer(participateauction, many=True, context={'request': request}).data,
+                        status=status.HTTP_200_OK)
+
+    @action(methods=['PATCH'], detail=True)
+    def add_buyer(self, request, pk):
+        auction = self.get_object()
+        buyer = request.user
+
+        get_auction = Auction.objects.get(pk=auction.id)
+
+        if get_auction.owner != buyer:
+            get_auction.buyer = buyer
+            get_auction.save()
+            serializer = serializers.AuctionSerializer(get_auction)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response("Buyer of auction", status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):

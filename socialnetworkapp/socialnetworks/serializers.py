@@ -88,6 +88,12 @@ class NoticeSerializer(serializers.ModelSerializer):
         fields = ['id', 'content']
 
 
+class ParticipateAuctionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ParticipateAuction
+        fields = '__all__'
+
+
 
 
 
