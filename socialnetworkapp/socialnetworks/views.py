@@ -85,6 +85,25 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
 
         return queries
 
+    @action(methods=['GET'], detail=True)
+    def get_by_id(self, request, pk):
+        post = self.get_object()
+
+        get_post = Post.objects.get(pk=post.id)
+
+        serializer_post = serializers.PostSerializer(get_post)
+
+        get_image = Images.objects.filter(post=post)
+        serializer_img = serializers.ImageSerializer(get_image, many=True)
+
+        response_data = {
+            'post': serializer_post.data,
+            'images': serializer_img.data,
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+
     # Đăng bài viêt
     def get_serializer_class(self):
         if self.action == 'create':
@@ -557,13 +576,28 @@ class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
         content = request.data.get('content')
         user = request.user
 
+        if not user.is_authenticated:
+            return Response("Anonymous comments are not allowed.", status=status.HTTP_400_BAD_REQUEST)
+
         comments = Comments.objects.get(pk=comment.id)
+        # breakpoint()
 
         if content:
             c = Comments.objects.create(content=content, post=comments.post, user=user, comment=comments)
             c.save()
-            serializer = serializers.CommentSerializer(c)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            serializer_comment = serializers.CommentSerializer(c)
+            if c:
+                content = f"{request.user.username} đã nhắc đến bạn"
+                n = Notice.objects.create(content=content, post=comment.post)
+                n.save()
+                serializer_notice = serializers.NoticeSerializer(n)
+
+            response_data = {
+                'comment': serializer_comment.data,
+                'notice': serializer_notice.data,
+            }
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -588,13 +622,93 @@ class NoticeViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = serializers.NoticeSerializer
 
     # lấy thông báo theo user so huu bai viet
+    @swagger_auto_schema(
+        operation_description="Push Images House",
+        manual_parameters=[
+                              openapi.Parameter(
+                                  name="Authorization",
+                                  in_=openapi.IN_HEADER,
+                                  type=openapi.TYPE_STRING,
+                                  description="Bearer token",
+                                  required=True,
+                                  default="Bearer your_token_here"
+                              ),
+            ],
+        responses={
+            200: openapi.Response(
+                description="Successful operation",
+                # schema=serializers.UserSerializer
+            )
+        }
+    )
     @action(methods=['GET'], url_path='get_notice', detail=False)
     def get_notice_of_user(self, request):
         user = request.user
         posts = Post.objects.filter(user=user)
-        notices = Notice.objects.filter(post__in=posts)
+        notices = Notice.objects.filter(post__in=posts).order_by('-created_date')
 
         serializer = serializers.NoticeSerializer(notices, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_description="Push Images House",
+        manual_parameters=[
+                              openapi.Parameter(
+                                  name="Authorization",
+                                  in_=openapi.IN_HEADER,
+                                  type=openapi.TYPE_STRING,
+                                  description="Bearer token",
+                                  required=True,
+                                  default="Bearer your_token_here"
+                              ),
+            ],
+        responses={
+            200: openapi.Response(
+                description="Successful operation",
+                # schema=serializers.UserSerializer
+            )
+        }
+    )
+    @action(methods=['GET'], detail=False)
+    def count_notice_by_user(self, request):
+        user = request.user
+
+        # breakpoint()
+        notices = Notice.objects.filter(post__user=user, active=True)
+
+        # serializer_data = serializers.NoticeSerializer(notices, many=True,  context={'request': request}).data
+        # response_data = {
+        #     'notices': serializer_data,
+        #     'count': notices.count(),
+        # }
+        return Response({'count': notices.count()}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_description="Push Images House",
+        manual_parameters=[
+            openapi.Parameter(
+                name="pk",
+                in_=openapi.IN_HEADER,
+                type=openapi.TYPE_STRING,
+                description="Id notice",
+                required=False,
+            ),
+        ],
+        responses={
+            200: openapi.Response(
+                description="Successful operation",
+                # schema=serializers.UserSerializer
+            )
+        }
+    )
+    @action(methods=['POST'], detail=True)
+    def set_active(self, request, pk):
+        notice = self.get_object()
+
+        notice.active = False
+        notice.save()
+
+        serializer = serializers.NoticeSerializer(notice)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

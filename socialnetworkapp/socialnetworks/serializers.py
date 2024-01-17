@@ -14,6 +14,24 @@ class ImageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ProductSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+
+class UserSerialzier(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'username', 'password', 'email', 'avatar']
+        extra_kwargs = {
+            'password': {
+                'write_only': True
+            }
+        }
+
+
 # Tạo bài viết
 class CreatePostSerializer(serializers.ModelSerializer):
     # post_hashtags = HashtagSerializer(many=True, required=False)
@@ -24,19 +42,19 @@ class CreatePostSerializer(serializers.ModelSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     post_hashtag = HashtagSerializer(many=True)
+    user = UserSerialzier(read_only=True)
+    image = ImageSerializer(read_only=True, many=True)
 
     class Meta:
         model = Post
         fields = '__all__'
 
 
-class ProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = '__all__'
-
-
 class AuctionSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+    user_care = UserSerialzier(many = True, read_only=True)
+    owner = UserSerialzier(read_only=True)
+    buyer = UserSerialzier(read_only=True)
 
     class Meta:
         model = Auction
@@ -44,27 +62,25 @@ class AuctionSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    user = UserSerialzier(read_only=True)
     # post = PostSerializer()
     class Meta:
         model = Comments
         fields = '__all__'
 
 
+class LikeTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LikeType
+        fields = ['id', 'name']
+
+
 class LikeSerializers(serializers.ModelSerializer):
+    user = UserSerialzier(read_only=True)
+    liketype = LikeTypeSerializer(read_only=True)
     class Meta:
         model = Like
         fields = '__all__'
-
-
-class UserSerialzier(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['first_name', 'last_name', 'username', 'password', 'email', 'avatar']
-        extra_kwargs = {
-            'password': {
-                'write_only': True
-            }
-        }
 
     def create(self, validated_data):
         data = validated_data.copy()
@@ -76,19 +92,16 @@ class UserSerialzier(serializers.ModelSerializer):
         return user
 
 
-class LikeTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LikeType
-        fields = ['id', 'name']
-
-
 class NoticeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notice
-        fields = ['id', 'content']
+        fields = '__all__'
 
 
 class ParticipateAuctionSerializer(serializers.ModelSerializer):
+    auction = AuctionSerializer(read_only=True)
+    user = UserSerialzier(read_only=True)
+
     class Meta:
         model = ParticipateAuction
         fields = '__all__'

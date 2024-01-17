@@ -10,11 +10,14 @@ from .models import Category, Product, User, Auction, Post, LikeType, Report, Re
 
 class SocialNetworkAppAdminSite(admin.AdminSite):
     site_header = 'Hệ thống mạng xã hội từ thiện'
+    index_title = 'Bảng dữ liệu mạng xã hội từ thiện'
 
     def get_urls(self):
         return [
-                   path('auction-stats/', self.stats_view)
+                   path('auction-stats/', self.stats_view),
+                   path('nhap/', self.nhap)
                ] + super().get_urls()
+
 
     def stats_view(self, request):
         year = request.GET.get('year')
@@ -29,6 +32,10 @@ class SocialNetworkAppAdminSite(admin.AdminSite):
             'stats_Cmm': stats_cmm,
             'stats_Auction': stats_auction
         })
+
+    def nhap(self, request):
+        return TemplateResponse(request,'admin/nhap.html')
+
 
 
 admin_site = SocialNetworkAppAdminSite(name='myapp')
