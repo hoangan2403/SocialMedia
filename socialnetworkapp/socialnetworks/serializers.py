@@ -107,6 +107,24 @@ class ParticipateAuctionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ReportTypeSerializer(serializers.ModelSerializer):
+    report = ReportType()
+
+    class Meta:
+        model = ReportType
+        fields = '__all__'
+
+
+class ReportSerializer(serializers.ModelSerializer):
+    report_type = ReportTypeSerializer(read_only=True)
+    class Meta:
+        model = Report
+        fields = '__all__'
+
+
+
+
+
 
 
 

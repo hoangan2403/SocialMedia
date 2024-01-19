@@ -1,20 +1,195 @@
 {% extends 'admin/base_site.html' %}
 {% block content %}
+<!-- Montserrat Font -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet">
+
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
 <style>
-    3
+    {% include 'admin/css/style_stats.css' %}
 </style>
 <div class="grid-container">
+    <!-- Header -->
     <header class="header">
-
+        <div class="menu-icon" onclick="openSidebar()">
+            <span class="material-icons-outlined">menu</span>
+        </div>
+        <div class="header-left">
+            <span class="material-icons-outlined">search</span>
+        </div>
+        <div class="header-right">
+            <span class="material-icons-outlined">notifications</span>
+            <span class="material-icons-outlined">email</span>
+            <span class="material-icons-outlined">account_circle</span>
+        </div>
     </header>
+    <!-- End Header -->
 
-    <aside id="sidebar">
-
-    </aside>
-
+    <!-- Main -->
     <main class="main-container">
+        <div class="main-title">
+            <p class="font-weight-bold">DASHBOARD</p>
+        </div>
 
+        <div class="main-cards">
+
+            <div class="card">
+                <div class="card-inner">
+                    <p class="text-primary">PRODUCTS</p>
+                    <span class="material-icons-outlined text-blue">inventory_2</span>
+                </div>
+                <span class="text-primary font-weight-bold">249</span>
+            </div>
+
+            <div class="card">
+                <div class="card-inner">
+                    <p class="text-primary">PURCHASE ORDERS</p>
+                    <span class="material-icons-outlined text-orange">add_shopping_cart</span>
+                </div>
+                <span class="text-primary font-weight-bold">83</span>
+            </div>
+
+            <div class="card">
+                <div class="card-inner">
+                    <p class="text-primary">SALES ORDERS</p>
+                    <span class="material-icons-outlined text-green">shopping_cart</span>
+                </div>
+                <span class="text-primary font-weight-bold">79</span>
+            </div>
+
+            <div class="card">
+                <div class="card-inner">
+                    <p class="text-primary">INVENTORY ALERTS</p>
+                    <span class="material-icons-outlined text-red">notification_important</span>
+                </div>
+                <span class="text-primary font-weight-bold">56</span>
+            </div>
+
+        </div>
+
+        <div class="charts">
+
+            <div class="charts-card">
+                <div class="form-group mb-md-0">
+                    <select name="statistics_type">
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                    <select name="statistics_type">
+                        <option value="Statistics_month">Statistics by Month</option>
+                        <option value="Statistics_quarter">Statistics by Quarter</option>
+                        <option value="Statistics_year">Statistics by Year</option>
+                    </select>
+                    <button style="padding:1px 5px; color: white; background-color: green; " type="submit">Filter
+                    </button>
+                </div>
+                <p class="chart-title">Top 5 Products {{ vi_khung}}</p>
+                <canvas id="myChart"></canvas>
+            </div>
+
+            <div class="charts-card">
+                <p class="chart-title">Purchase and Sales Orders</p>
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Active Hosts</th>
+                    </thead>
+                    <tbody>
+                    {% for u in stats_Like %}
+                    <tr>
+                        <td>{{ u.name}}</td>
+                        <td>{{ u.count1 }}</td>
+
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <div class="charts">
+
+            <div class="charts-card" style="width: 130%">
+                <p class="chart-title">Top 5 Products {{ vi_khung}}</p>
+                <canvas id="1"></canvas>
+            </div>
+
+            <div class="charts-card" style="width: 69%;right: auto;margin-left: auto;">
+                <p class="chart-title">Purchase and Sales Orders</p>
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Active Hosts</th>
+                    </thead>
+                    <tbody>
+                    {% for u in stats_Like %}
+                    <tr>
+                        <td>{{ u.name}}</td>
+                        <td>{{ u.count1 }}</td>
+
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
     </main>
+    <!-- End Main -->
+
 </div>
 
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let labels = [];
+    let values = [];
+
+    {% for c in stats_Like %}
+    values.push({{ c.count1 }})
+    labels.push('{{ c.name }}')
+    {% endfor %}
+
+    window.onload = () => {
+        const ctx = document.getElementById('myChart');
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '# So luong',
+            data: values,
+            borderWidth: 1,
+            backgroundColor: [
+              'rgb(255, 99, 132)',
+              'rgb(54, 162, 235)',
+              'rgb(255, 205, 86)'
+            ]
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+</script>
 {% endblock %}

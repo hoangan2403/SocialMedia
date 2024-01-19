@@ -34,8 +34,19 @@ class SocialNetworkAppAdminSite(admin.AdminSite):
         })
 
     def nhap(self, request):
-        return TemplateResponse(request,'admin/nhap.html')
+        year = request.GET.get('year')
+        month = request.GET.get('month')
 
+        stats_like = dao.count_LikeAuction_By_CateOfProduct(year, month)
+        stats_cmm = dao.count_CmmAuction_By_CateOfProduct(year, month)
+        stats_auction = dao.count_Auction_By_CateOfProduct(year, month)
+
+        return TemplateResponse(request,'admin/nhap.html',{
+            'stats_Like': stats_like,
+            'stats_Cmm': stats_cmm,
+            'stats_Auction': stats_auction,
+            'vi_khung' : 20
+        })
 
 
 admin_site = SocialNetworkAppAdminSite(name='myapp')

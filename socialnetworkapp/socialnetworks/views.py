@@ -9,7 +9,8 @@ from rest_framework import viewsets, generics, status, permissions, parsers
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
-from socialnetworks.models import Post, Auction, User, Hashtag, Images, Comments, Like, LikeType, Notice, Product, Category, ParticipateAuction
+from socialnetworks.models import (Post, Auction, User, Hashtag, Images,
+                                   Comments, Like, LikeType, Notice, Product, Category, ParticipateAuction, Report, ReportType)
 from socialnetworks import serializers, paginators, perms
 from rest_framework.decorators import action
 
@@ -118,13 +119,16 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         images = request.FILES.getlist('image')
         hashtags = request.data.getlist('name_hashtag')
 
+
         image_data = []
 
         post, created = Post.objects.get_or_create(content=content, user=user)
 
         if created:
             for image in images:
-                new_image = Images.objects.create(image=image, post=post)
+                cloudinary_base_url = "https://res.cloudinary.com/dhcvsbuew/"
+                full_cloudinary_url = f"{cloudinary_base_url}{image}"
+                new_image = Images.objects.create(image=full_cloudinary_url, post=post)
                 serializer_img = serializers.ImageSerializer(new_image)
                 image_data.append(serializer_img.data)
 
@@ -336,11 +340,18 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
     @action(methods=['GET'], detail=False)
     def get_post_by_user(self, request):
         user = request.user
+        posts = Post.objects.filter(user=user).all()
+        data = []
+        # breakpoint()
+        for post in posts:
+            imgs = Images.objects.filter(post=post).all()
+            response_data = {
+                'post': serializers.PostSerializer(post).data,
+                'image': serializers.ImageSerializer(imgs, many=True).data,
+            }
 
-        post = Post.objects.filter(user=user)
-
-        serializer = serializers.PostSerializer(post, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            data.append(response_data)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -373,15 +384,15 @@ class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
         description = request.data.get('description_product')
         image = request.FILES.get('image_product')
         category = int(request.data.get('category'))
-
-        s =[]
+        cloudinary_base_url = "https://res.cloudinary.com/dhcvsbuew/"
+        full_cloudinary_url = f"{cloudinary_base_url}{image}"
 
         auction, created = Auction.objects.get_or_create(owner=user, content=content, starting_price=starting_price,
                                                          start_date=start_date, end_date=end_date, date_of_payment=date_of_payment)
         # breakpoint()
         if created:
             category_id = Category.objects.get(pk=category)
-            new_product = Product.objects.create(name=name, description=description, image=image, category=category_id)
+            new_product = Product.objects.create(name=name, description=description, image=full_cloudinary_url, category=category_id)
             serializer_product = serializers.ProductSerializer(new_product)
 
             auction.product = new_product
@@ -397,6 +408,60 @@ class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
             return Response(response_data, status=status.HTTP_201_CREATED)
         else:
             return Response('Auction not created', status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['POST'], detail=True)
+    def update_auction(self, request, pk):
+        auction = self.get_object()
+        user = request.user
+        content = request.data.get('content')
+        starting_price = request.data.get('starting_price')
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        date_of_payment = request.data.get('date_of_payment')
+
+        name = request.data.get('name_product')
+        description = request.data.get('description_product')
+        image = request.FILES.get('image_product')
+        category = int(request.data.get('category'))
+
+        auctions = Auction.objects.get(pk=auction.id)
+        if content:
+            auctions.content = content
+            auctions.save()
+        if starting_price:
+            auctions.starting_price = starting_price
+            auctions.save()
+        if start_date:
+            auctions.start_date = start_date
+            auctions.save()
+        if end_date:
+            auctions.end_date = end_date
+            auctions.save()
+        if date_of_payment:
+            auctions.date_of_payment = date_of_payment
+            auctions.save()
+        if name:
+            auctions.product.name = name
+            auctions.product.save()
+        if description:
+            auctions.product.description = name
+            auctions.product.save()
+        if image:
+            auctions.product.image = image
+            auctions.product.save()
+        if category:
+            categorys = Category.objects.get(pk=category)
+            auctions.product.category = categorys
+            auctions.product.save()
+
+        return Response(serializers.AuctionSerializer(auctions).data, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=True, url_path="")
+    def get_by_id(self, request, pk):
+        auction = self.get_object()
+
+        get_auction = Auction.objects.get(pk=auction.id)
+        return Response(serializers.AuctionSerializer(get_auction).data, status=status.HTTP_200_OK)
 
     @action(methods=['POST'], detail=True)
     def add_participateauction(self, request, pk):
@@ -437,6 +502,30 @@ class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
         else:
             return Response("Buyer of auction", status=status.HTTP_400_BAD_REQUEST)
 
+    @action(methods=['GET'], detail=True)
+    def count_participateauction(self, request, pk):
+        auction = self.get_object().participateauction_set.all()
+
+        return Response({'count': auction.count()}, status=status.HTTP_200_OK)
+
+    @action(methods=['POST'], detail=True)
+    def report(self, request, pk):
+        auction = self.get_object()
+        r = int(request.data.get('report_type'))
+        user = request.user
+
+        if auction:
+            a = Auction.objects.get(pk=auction.id)
+        else:
+            return Response("Auction is not", status=status.HTTP_404_NOT_FOUND)
+
+        report = ReportType.objects.get(pk=r)
+
+        created = Report.objects.create(user=user, auction=a, report_type=report)
+
+        serializer = serializers.ReportSerializer(created)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True).all()
@@ -458,6 +547,15 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 class HashtagViewSet(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIView):
     queryset = Hashtag.objects.all()
     serializer_class = serializers.HashtagSerializer
+
+    @action(methods=['GET'], detail=True)
+    def get_post_by_hashtag(self, request, pk):
+        hashtag = self.get_object()
+
+        if hashtag:
+            post = Post.objects.filter(post_hashtag=hashtag.id)
+
+        return Response(serializers.PostSerializer(post, many=True).data, status=status.HTTP_200_OK)
 
 
 class ImageViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -710,6 +808,37 @@ class NoticeViewSet(viewsets.ViewSet, generics.ListAPIView):
 
         serializer = serializers.NoticeSerializer(notice)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ParticipateAuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = ParticipateAuction.objects.all()
+    serializer_class = serializers.ParticipateAuction
+
+    @action(methods=['POST'], detail=True)
+    def update_participateauction(self, request, pk):
+        p = self.get_object()
+        price = request.data.get('price')
+
+        participateauction = ParticipateAuction.objects.get(pk=p.id)
+        # breakpoint()
+        if price:
+            participateauction.price = price
+            participateauction.save()
+
+        return Response(serializers.ParticipateAuctionSerializer(participateauction).data, status=status.HTTP_200_OK)
+
+
+class ReportViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Report.objects.all()
+    serializer_class = serializers.ReportSerializer
+
+
+class ReportTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = ReportType.objects.all()
+    serializer_class = serializers.ReportTypeSerializer
+
+
+
 
 
 

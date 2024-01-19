@@ -15,6 +15,9 @@ router.register('comments', views.CommentViewSet, basename='comments')
 router.register('likes', views.LikeViewSet, basename='likes')
 router.register('notices', views.NoticeViewSet, basename='notices')
 router.register('emails', views.SendEmailViewSet, basename='emails')
+router.register('participateauctions', views.ParticipateAuctionViewSet, basename='participateauctions')
+router.register('reports', views.ReportViewSet, basename='reports')
+router.register('reportTypes', views.ReportTypeViewSet, basename='reportTypes')
 
 urlpatterns = [
     path('', include(router.urls)),

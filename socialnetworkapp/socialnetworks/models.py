@@ -69,11 +69,10 @@ class ReportType(BaseModel):
 
 
 class Report(BaseModel):
-    reason = RichTextField(null=True)
-    auction = models.ForeignKey(Auction, on_delete=models.CASCADE)
+    auction = models.ForeignKey(Auction, on_delete=models.CASCADE, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    post = models.ForeignKey(Post, on_delete= models.CASCADE)
-    report_type = models.ForeignKey(ReportType, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete= models.CASCADE, null=True)
+    report_type = models.ForeignKey(ReportType, on_delete=models.CASCADE, null=True)
 
 
 class Notice(BaseModel):
@@ -110,7 +109,7 @@ class Comments(BaseModel):
 
 class Images(BaseModel):
     image = CloudinaryField('image', null=True)
-    post = models.ForeignKey('Post', on_delete=models.RESTRICT, related_query_name="images")
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, related_query_name="images")
 
 
 
