@@ -1,29 +1,40 @@
 {% extends 'admin/base_site.html' %}
 {% block content %}
 <h1>Thống kê số lượt like và số lượt comment</h1>
-<ul>
-    {% for c in stats %}
-    <li><strong>{{ c.name }}</strong>: {{c.count1}}</li>
-    {% endfor %}
-</ul>
+<table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Active Hosts</th>
+                    </thead>
+                    <tbody>
+                    {% for u in count %}
+                    <tr>
+                        <td>{{ u.month}}</td>
+                        <td>{{ u.sum }}</td>
+
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
 <div>
     <label for="year">Year:</label>
     <input type="number" id="year" name="year" >
 
-    <label for="month">Month:</label>
-    <select id="month" name="month" onclick="checkYear()">
-        <option value="01">January</option>
-        <option value="02">February</option>
-        <option value="03">March</option>
-        <option value="04">April</option>
-        <option value="05">May</option>
-        <option value="06">June</option>
-        <option value="07">July</option>
-        <option value="08">August</option>
-        <option value="09">September</option>
-        <option value="10">October</option>
-        <option value="11">November</option>
-        <option value="12">December</option>
+    <label for="month">Quarter:</label>
+    <select id="month" name="quarters" onclick="checkYear()">
+        <option value="01">Quý 1</option>
+        <option value="02">Quý 2</option>
+        <option value="03">Quý 3</option>
+        <option value="04">Quý 4</option>
+<!--        <option value="05">May</option>-->
+<!--        <option value="06">June</option>-->
+<!--        <option value="07">July</option>-->
+<!--        <option value="08">August</option>-->
+<!--        <option value="09">September</option>-->
+<!--        <option value="10">October</option>-->
+<!--        <option value="11">November</option>-->
+<!--        <option value="12">December</option>-->
     </select>
 
     <button onclick="updateCharts()">Update Charts</button>
@@ -45,7 +56,7 @@
         let enteredYear = document.getElementById('year').value;
         let enteredMonth = document.getElementById('month').value;
 
-        let url = `http://127.0.0.1:8000/admin/auction-stats/?year=${enteredYear}&month=${enteredMonth}`
+        let url = `http://127.0.0.1:8000/admin/stats/?year=${enteredYear}&quarters=${enteredMonth}`
         window.location.href = url;
 
     }
@@ -67,9 +78,9 @@
 
     let labels = [];
     let values = [];
-    {% for c in stats_Like %}
-    values.push({{ c.count1 }})
-    labels.push('{{ c.name }}')
+    {% for c in count %}
+    values.push({{ c.sum }})
+    labels.push('{{ c.month }}')
     {% endfor %}
 
     let labels2 = [];
@@ -84,13 +95,14 @@
 
 
       new Chart(ctxLike, {
-        type: 'bar',
+        type: 'line',
         data: {
           labels: labels,
           datasets: [{
             label: "Số lượng like",
             data: values,
-            borderWidth: 1,
+            borderWidth: 2,
+            borderColor: 'rgb(75, 192, 192)',
             backgroundColor: [
               'rgb(255, 99, 132)',
               'rgb(54, 162, 235)',
@@ -111,7 +123,7 @@
 
 
         new Chart(ctxCmm, {
-            type: 'bar',
+            type: 'line',
             data: {
               labels: labels1,
               datasets: [{

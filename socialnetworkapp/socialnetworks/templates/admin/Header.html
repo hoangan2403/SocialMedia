@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        .object-tools {
+            float: left;
+        }
+    </style>
+{% endblock %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    <li><a href="{% url 'admin:stats' %}" class="viewsitelink">View on site</a></li>
+{% endblock %}

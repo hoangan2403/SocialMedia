@@ -36,7 +36,7 @@ class Product(BaseModel):
         return self.name
 
 
-class Auction(models.Model):
+class Auction(BaseModel):
     content = RichTextField(null=True)
     starting_price = models.FloatField(null=True)
     start_date = models.DateField(null=True)
@@ -57,7 +57,7 @@ class ParticipateAuction(BaseModel):
 class Post(BaseModel):
     content = RichTextField(null=True)
     # image = models.ImageField(upload_to="posts/%Y/%m", null=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_query_name='userpost')
     post_hashtag = models.ManyToManyField('Hashtag', null=True, related_query_name="hashtag")
 
 

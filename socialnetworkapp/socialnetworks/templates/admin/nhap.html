@@ -10,21 +10,21 @@
     {% include 'admin/css/style_stats.css' %}
 </style>
 <div class="grid-container">
-    <!-- Header -->
-    <header class="header">
-        <div class="menu-icon" onclick="openSidebar()">
-            <span class="material-icons-outlined">menu</span>
-        </div>
-        <div class="header-left">
-            <span class="material-icons-outlined">search</span>
-        </div>
-        <div class="header-right">
-            <span class="material-icons-outlined">notifications</span>
-            <span class="material-icons-outlined">email</span>
-            <span class="material-icons-outlined">account_circle</span>
-        </div>
-    </header>
-    <!-- End Header -->
+<!--    &lt;!&ndash; Header &ndash;&gt;-->
+<!--    <header class="header">-->
+<!--        <div class="menu-icon" onclick="openSidebar()">-->
+<!--            <span class="material-icons-outlined">menu</span>-->
+<!--        </div>-->
+<!--        <div class="header-left">-->
+<!--            <span class="material-icons-outlined">search</span>-->
+<!--        </div>-->
+<!--        <div class="header-right">-->
+<!--            <span class="material-icons-outlined">notifications</span>-->
+<!--            <span class="material-icons-outlined">email</span>-->
+<!--            <span class="material-icons-outlined">account_circle</span>-->
+<!--        </div>-->
+<!--    </header>-->
+<!--    &lt;!&ndash; End Header &ndash;&gt;-->
 
     <!-- Main -->
     <main class="main-container">
@@ -36,26 +36,26 @@
 
             <div class="card">
                 <div class="card-inner">
-                    <p class="text-primary">PRODUCTS</p>
+                    <p class="text-primary">Total number of post in {{ year }} </p>
                     <span class="material-icons-outlined text-blue">inventory_2</span>
                 </div>
-                <span class="text-primary font-weight-bold">249</span>
+                <span class="text-primary font-weight-bold">{{ count_post }}</span>
             </div>
 
             <div class="card">
                 <div class="card-inner">
-                    <p class="text-primary">PURCHASE ORDERS</p>
+                    <p class="text-primary">Total number of auction in {{ year }} </p>
                     <span class="material-icons-outlined text-orange">add_shopping_cart</span>
                 </div>
-                <span class="text-primary font-weight-bold">83</span>
+                <span class="text-primary font-weight-bold">{{ count_auction_current_year }}</span>
             </div>
 
             <div class="card">
                 <div class="card-inner">
-                    <p class="text-primary">SALES ORDERS</p>
+                    <p class="text-primary">Total number of user</p>
                     <span class="material-icons-outlined text-green">shopping_cart</span>
                 </div>
-                <span class="text-primary font-weight-bold">79</span>
+                <span class="text-primary font-weight-bold">{{ count_user }}</span>
             </div>
 
             <div class="card">
@@ -71,82 +71,99 @@
         <div class="charts">
 
             <div class="charts-card">
-                <div class="form-group mb-md-0">
-                    <select name="statistics_type">
-                        <option value="01">January</option>
-                        <option value="02">February</option>
-                        <option value="03">March</option>
-                        <option value="04">April</option>
-                        <option value="05">May</option>
-                        <option value="06">June</option>
-                        <option value="07">July</option>
-                        <option value="08">August</option>
-                        <option value="09">September</option>
-                        <option value="10">October</option>
-                        <option value="11">November</option>
-                        <option value="12">December</option>
-                    </select>
-                    <select name="statistics_type">
-                        <option value="Statistics_month">Statistics by Month</option>
-                        <option value="Statistics_quarter">Statistics by Quarter</option>
-                        <option value="Statistics_year">Statistics by Year</option>
-                    </select>
-                    <button style="padding:1px 5px; color: white; background-color: green; " type="submit">Filter
-                    </button>
+                <div class="form-group" style="display: flex; justify-content: space-between;">
+                    <div>
+                        <p class="chart-title">Stats Number Of Like By Category Product Of Auction</p>
+                    </div>
+                    <div style="display: flex;">
+                        <select id="month" style="margin-right: 10px; max-height: 28px;" name="statistics_type">
+                            <option value="">All</option>
+                            <option value="01">January</option>
+                            <option value="02">February</option>
+                            <option value="03">March</option>
+                            <option value="04">April</option>
+                            <option value="05">May</option>
+                            <option value="06">June</option>
+                            <option value="07">July</option>
+                            <option value="08">August</option>
+                            <option value="09">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                        <select id="year" style="margin-right: 10px; max-height: 28px;" name="statistics_type">
+                            <option value="">All</option>
+                            {% for y in years %}
+                            <option value="{{y.start_date__year}}">{{y.start_date__year}}</option>
+                            {%endfor%}
+
+                        </select>
+                        <button onclick="updateCharts1()"
+                                style="padding:1px 5px;color: white;background-color: green;max-height: 28px;"
+                                type="submit">Filter
+                        </button>
+                    </div>
                 </div>
-                <p class="chart-title">Top 5 Products {{ vi_khung}}</p>
-                <canvas id="myChart"></canvas>
+                <canvas id="ChartLike"></canvas>
             </div>
 
             <div class="charts-card">
-                <p class="chart-title">Purchase and Sales Orders</p>
-                <table class="table table-striped">
-                    <thead>
-                    <tr>
-                        <th>Month</th>
-                        <th>Active Hosts</th>
-                    </thead>
-                    <tbody>
-                    {% for u in stats_Like %}
-                    <tr>
-                        <td>{{ u.name}}</td>
-                        <td>{{ u.count1 }}</td>
-
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                <p class="chart-title">Stats Number Of Comments By Category Product Of Auction</p>
+                <canvas id="ChartCmm"></canvas>
             </div>
 
         </div>
 
         <div class="charts">
 
-            <div class="charts-card" style="width: 130%">
-                <p class="chart-title">Top 5 Products {{ vi_khung}}</p>
-                <canvas id="1"></canvas>
+            <div class="charts-card-1">
+                <div class="form-group " style="display: flex; justify-content: space-between;">
+                    <div>
+                        <p class="chart-title">Stats Number Of Auction By </p>
+                    </div>
+                    <div>
+                        <select id="quarter" name="quaters">
+                            <option value="">All</option>
+                            <option value="01">Quarter 1</option>
+                            <option value="02">Quarter 2</option>
+                            <option value="03">Quarter 3</option>
+                            <option value="04">Quarter 4</option>
+                        </select>
+                        <select id="year_auction" name="year">
+                            <option value="">All</option>
+                            {% for y in years %}
+                            <option value={{ y.start_date__year }}>{{y.start_date__year}}</option>
+                            {%endfor%}
+
+                        </select>
+                        <button onclick="updateCharts()"
+                                style="padding:1px 5px; color: white; background-color: green; "
+                                type="submit">Filter
+                        </button>
+                    </div>
+                </div>
+
+                <canvas id="ChartLineAuction" style="height: 408px; width: 816px;"></canvas>
+
             </div>
-
-            <div class="charts-card" style="width: 69%;right: auto;margin-left: auto;">
-                <p class="chart-title">Purchase and Sales Orders</p>
-                <table class="table table-striped">
-                    <thead>
+            <div class="charts-card" style="width: 100%;right: auto;margin-left: auto;">
+                <p class="chart-title">Top 5 User Have Post In {{ year }}</p>
+                <table>
                     <tr>
-                        <th>Month</th>
-                        <th>Active Hosts</th>
-                    </thead>
-                    <tbody>
-                    {% for u in stats_Like %}
-                    <tr>
-                        <td>{{ u.name}}</td>
-                        <td>{{ u.count1 }}</td>
-
+                        <th>Id</th>
+                        <th>Username</th>
+                        <th>Number posrt</th>
                     </tr>
-                    {% endfor %}
-                    </tbody>
+                    {%for c in top_3  %}
+                    <tr>
+                        <td>{{ c.id }}</td>
+                        <td>{{ c.username }}</td>
+                        <td>{{ c.count }}</td>
+                    </tr>
+                    {%endfor%}
                 </table>
-            </div>
 
+            </div>
         </div>
     </main>
     <!-- End Main -->
@@ -156,40 +173,173 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    let labels = [];
-    let values = [];
+    <!--    var currentYear = new Date().getFullYear();-->
+    <!--    var currentTimeElement = document.getElementById("current-time");-->
+    <!--    console.log(currentTimeElement)-->
+    <!--    currentYearElement.textContent = "Total number of post in " + currentYear;-->
 
-    {% for c in stats_Like %}
-    values.push({{ c.count1 }})
-    labels.push('{{ c.name }}')
-    {% endfor %}
+        function updateCharts() {
+            let enteredYear = document.getElementById('year_auction').value;
+            let enteredMonth = document.getElementById('quarter').value;
 
-    window.onload = () => {
-        const ctx = document.getElementById('myChart');
+            let url = `http://127.0.0.1:8000/admin/nhap/?year=${enteredYear}&quarters=${enteredMonth}`
+            window.location.href = url;
 
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: '# So luong',
-            data: values,
-            borderWidth: 1,
-            backgroundColor: [
-              'rgb(255, 99, 132)',
-              'rgb(54, 162, 235)',
-              'rgb(255, 205, 86)'
-            ]
-          }]
-        },
-        options: {
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          }
         }
-      });
-    }
+        function updateCharts1() {
+            let enteredYear = document.getElementById('year').value;
+            let enteredMonth = document.getElementById('month').value;
+
+            let url = `http://127.0.0.1:8000/admin/nhap/?year=${enteredYear}&month=${enteredMonth}`
+            window.location.href = url;
+
+        }
+        function checkYear() {
+            let enteredYear = document.getElementById('year');
+            let enteredMonth = document.getElementById('month');
+
+            if(!enteredYear.value){
+                alert('Vui lòng chọn năm trước khi chọn tháng.')
+                monthSelect.blur();
+            }
+        }
+        let labels1 = [];
+        let values1 = [];
+        {% for c in stats_Cmm %}
+        values1.push({{ c.count2 }})
+        labels1.push('{{ c.name }}')
+        {% endfor %}
+
+        let labels = [];
+        let values = [];
+        {% for c in stats_Like %}
+        values.push({{ c.count1 }})
+        labels.push('{{ c.name }}')
+        {% endfor %}
+
+        let labels2 = [];
+        let values2 = [];
+        {% for c in stats_Auction %}
+        values2.push({{ c.count3 }})
+        labels2.push('{{ c.name }}')
+        {% endfor %}
+
+        let labels3 = [];
+        let values3 = [];
+        {% for c in count_auction %}
+        values3.push({{ c.sum }})
+        labels3.push('{{ c.month }}')
+        {% endfor %}
+
+        window.onload = () => {
+            const ctxLike = document.getElementById('ChartLike');
+
+
+          new Chart(ctxLike, {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: "Số lượng like",
+                data: values,
+                borderWidth: 1,
+                backgroundColor: [
+                  'rgb(255, 99, 132)',
+                  'rgb(54, 162, 235)',
+                  'rgb(255, 205, 86)'
+                ]
+              }]
+            },
+            options: {
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+
+            const ctxCmm = document.getElementById('ChartCmm');
+
+
+            new Chart(ctxCmm, {
+                type: 'bar',
+                data: {
+                  labels: labels1,
+                  datasets: [{
+                    label: "Số lượng comments",
+                    data: values1,
+                    borderWidth: 1,
+                    backgroundColor: [
+                      'rgb(255, 99, 132)',
+                      'rgb(54, 162, 235)',
+                      'rgb(255, 205, 86)'
+                    ]
+                  }]
+                },
+                options: {
+                  scales: {
+                    y: {
+                      beginAtZero: true
+                    }
+                  }
+                }
+              });
+
+              const ctxAuction = document.getElementById('ChartAuction');
+
+
+          new Chart(ctxAuction, {
+            type: 'bar',
+            data: {
+              labels: labels2,
+              datasets: [{
+                label: "Số lượng bài đấu giá",
+                data: values2,
+                borderWidth: 1,
+                backgroundColor: [
+                  'rgb(255, 99, 132)',
+                  'rgb(54, 162, 235)',
+                  'rgb(255, 205, 86)'
+                ]
+              }]
+            },
+            options: {
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+
+          const lineAuction = document.getElementById('ChartLineAuction');
+
+
+          new Chart(lineAuction, {
+            type: 'line',
+            data: {
+              labels: labels3,
+              datasets: [{
+                label: "Số lượng bài đấu giá",
+                data: values3,
+                borderWidth: 2,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: [
+                  'rgb(255, 99, 132)',
+                  'rgb(54, 162, 235)',
+                  'rgb(255, 205, 86)'
+                ]
+              }]
+            },
+            options: {
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+            }
 </script>
 {% endblock %}

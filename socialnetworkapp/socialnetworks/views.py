@@ -90,6 +90,8 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
     def get_by_id(self, request, pk):
         post = self.get_object()
 
+        response_data=[]
+
         get_post = Post.objects.get(pk=post.id)
 
         serializer_post = serializers.PostSerializer(get_post)
@@ -97,10 +99,11 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         get_image = Images.objects.filter(post=post)
         serializer_img = serializers.ImageSerializer(get_image, many=True)
 
-        response_data = {
-            'post': serializer_post.data,
-            'images': serializer_img.data,
-        }
+        data = serializer_post.data
+        data['image'] = serializer_img.data
+
+        response_data.append(data)
+
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -118,7 +121,6 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         content = request.data.get('content')
         images = request.FILES.getlist('image')
         hashtags = request.data.getlist('name_hashtag')
-
 
         image_data = []
 
@@ -211,9 +213,11 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         hashtag_name = request.data.getlist('hashtag_name')
         hashtag_id = request.data.getlist('hashtag_id')
 
+        existing_hashtags = post.post_hashtag.all()
+
         for h, h_name in zip(hashtag_id, hashtag_name):
             try:
-                hashtag = Hashtag.objects.get(pk=h, post=post)
+                hashtag = Hashtag.objects.get(pk=h)
             except Hashtag.DoesNotExist:
                 return Response({"error": "Hashtag không tồn tại cho bài viết này"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -224,8 +228,22 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
                 new_hashtag, _ = Hashtag.objects.get_or_create(name=h_name)
                 post.post_hashtag.add(new_hashtag)
             else:
-                hashtag.name = h_name
-                hashtag.save()
+                existing_hashtag_with_name = existing_hashtags.filter(name=h_name).first()
+
+                if existing_hashtag_with_name:
+                    # Update the existing hashtag name
+                    existing_hashtag_with_name.name = h_name
+                    existing_hashtag_with_name.save()
+                else:
+                    hashtag.name = h_name
+                    hashtag.save()
+
+        if len(hashtag_name) > existing_hashtags.count():
+            # Add new hashtags to the post
+            new_hashtags = set(hashtag_name) - set(existing_hashtags.values_list('name', flat=True))
+            for new_hashtag_name in new_hashtags:
+                new_hashtag, _ = Hashtag.objects.get_or_create(name=new_hashtag_name)
+                post.post_hashtag.add(new_hashtag)
 
         return Response({"message": "Cập nhật tên hashtag thành công"}, status=status.HTTP_200_OK)
 
@@ -340,18 +358,40 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
     @action(methods=['GET'], detail=False)
     def get_post_by_user(self, request):
         user = request.user
+        serialized_posts = []
         posts = Post.objects.filter(user=user).all()
         data = []
         # breakpoint()
         for post in posts:
-            imgs = Images.objects.filter(post=post).all()
-            response_data = {
-                'post': serializers.PostSerializer(post).data,
-                'image': serializers.ImageSerializer(imgs, many=True).data,
-            }
+            images = post.images_set.all()  # Sử dụng related name "images" để lấy tất cả hình ảnh của bài viết
 
-            data.append(response_data)
-        return Response(data, status=status.HTTP_200_OK)
+            post_serializer = serializers.PostSerializer(post)
+            image_serializer = serializers.ImageSerializer(images, many=True)
+
+            post_data = post_serializer.data
+            post_data['images'] = image_serializer.data
+
+            serialized_posts.append(post_data)
+
+        return Response(serialized_posts, status=status.HTTP_200_OK)
+
+    @action(methods=['DELETE'], detail=True)
+    def delete_hashtag(self, request, pk):
+        p = self.get_object()
+        name = request.data.get('name')
+
+        h = Hashtag.objects.get(name=name)
+
+        post_hashtag = Post.objects.filter(post_hashtag__name=name).count()
+
+        if post_hashtag > 1:
+            p.post_hashtag.remove(h)
+            p.save()
+        else:
+            h.remove()
+            h.save
+
+        return Response("Xóa thanh cong", status=status.HTTP_204_NO_CONTENT)
 
 
 class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -556,6 +596,11 @@ class HashtagViewSet(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIV
             post = Post.objects.filter(post_hashtag=hashtag.id)
 
         return Response(serializers.PostSerializer(post, many=True).data, status=status.HTTP_200_OK)
+
+
+
+
+
 
 
 class ImageViewSet(viewsets.ViewSet, generics.ListAPIView):
