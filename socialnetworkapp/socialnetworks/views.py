@@ -393,6 +393,21 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
 
         return Response("Xóa thanh cong", status=status.HTTP_204_NO_CONTENT)
 
+    @action(methods=['POST'], detail=True)
+    def add_report(self, request, pk):
+        post = self.get_object()
+        user = request.user
+        r = int(request.data.get('report_type'))
+
+        if r:
+            report_type = ReportType.objects.get(pk=r)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        create = Report.objects.create(user=user, post=post, report_type=report_type)
+
+        return Response(serializers.ReportSerializer(create).data, status=status.HTTP_201_CREATED)
+
 
 class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Auction.objects.all()
@@ -566,6 +581,34 @@ class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
         serializer = serializers.ReportSerializer(created)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(methods=['POST'], detail=True)
+    def user_care(self, request, pk):
+        auction = self.get_object()
+        user = request.user
+
+        if auction.user_care.filter(pk=user.pk).exists():
+            auction.user_care.remove(user)
+            return Response("Don't care", status=status.HTTP_204_NO_CONTENT)
+        else:
+            auction.user_care.add(user)
+            return Response("Care", status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=True)
+    def count_user_care(self, request, pk):
+        auction = self.get_object()
+
+        count = auction.user_care.count()
+
+        return Response(count, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=True)
+    def get_user_care(self, request, pk):
+        auction = self.get_object()
+
+        users = auction.user_care.all()
+
+        return Response(serializers.UserSerialzier(users, many=True).data)
+
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True).all()
@@ -583,6 +626,14 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     def current_user(self, request):
         return Response(serializers.UserSerialzier(request.user).data)
 
+    @action(methods=['GET'], detail=False)
+    def auction(self, request):
+        user = request.user
+
+        auctions = Auction.objects.filter(user_care=user)
+
+        return Response(serializers.AuctionSerializer(auctions, many=True, context={'request': request}).data, status=status.HTTP_200_OK)
+
 
 class HashtagViewSet(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIView):
     queryset = Hashtag.objects.all()
@@ -598,12 +649,7 @@ class HashtagViewSet(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIV
         return Response(serializers.PostSerializer(post, many=True).data, status=status.HTTP_200_OK)
 
 
-
-
-
-
-
-class ImageViewSet(viewsets.ViewSet, generics.ListAPIView):
+class ImageViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIView):
     queryset = Images.objects.all()
     serializer_class = serializers.ImageSerializer
     parser_classes = [parsers.MultiPartParser]
