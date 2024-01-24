@@ -1,4 +1,4 @@
-from socialnetworks.models import Category, Product, User, Auction, ParticipateAuction, Post, Report, ReportType, Notice, Hashtag, LikeType, Like, Comments,Images
+from socialnetworks.models import *
 from rest_framework import serializers
 
 
@@ -121,6 +121,13 @@ class ReportSerializer(serializers.ModelSerializer):
         model = Report
         fields = '__all__'
 
+
+class FollowSerializer(serializers.ModelSerializer):
+    follower = UserSerialzier(read_only=True)
+    follow_with_user = UserSerialzier(read_only=True)
+    class Meta:
+        model = Follow
+        fields = '__all__'
 
 
 

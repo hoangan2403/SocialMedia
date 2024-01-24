@@ -18,6 +18,7 @@ router.register('emails', views.SendEmailViewSet, basename='emails')
 router.register('participateauctions', views.ParticipateAuctionViewSet, basename='participateauctions')
 router.register('reports', views.ReportViewSet, basename='reports')
 router.register('reportTypes', views.ReportTypeViewSet, basename='reportTypes')
+router.register('follows', views.FollowViewSet, basename='follows')
 
 urlpatterns = [
     path('', include(router.urls)),

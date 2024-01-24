@@ -19,6 +19,12 @@ class User(AbstractUser):
     avatar = CloudinaryField('avatar', null=True)
 
 
+# 1 người có nhiều follow và 1 người follow nhieeu ng
+class Follow(BaseModel):
+    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='follower_follow_set')
+    follow_with_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_follow_set')
+
+
 class Category(BaseModel):
     name = models.CharField(max_length=100, null=False)
 
@@ -110,6 +116,8 @@ class Comments(BaseModel):
 class Images(BaseModel):
     image = CloudinaryField('image', null=True)
     post = models.ForeignKey('Post', on_delete=models.CASCADE, related_query_name="images")
+
+
 
 
 

@@ -9,8 +9,7 @@ from rest_framework import viewsets, generics, status, permissions, parsers
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
-from socialnetworks.models import (Post, Auction, User, Hashtag, Images,
-                                   Comments, Like, LikeType, Notice, Product, Category, ParticipateAuction, Report, ReportType)
+from socialnetworks.models import *
 from socialnetworks import serializers, paginators, perms
 from rest_framework.decorators import action
 
@@ -634,6 +633,29 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
         return Response(serializers.AuctionSerializer(auctions, many=True, context={'request': request}).data, status=status.HTTP_200_OK)
 
+    @action(methods=['POST'], detail=True)
+    def follow(self, request, pk):
+        user = self.get_object()
+        u = request.user
+
+        follow, created = Follow.objects.get_or_create(follower=u, follow_with_user=user)
+        if follow.active:
+            follow.active = False
+            follow.save()
+            return Response("Follow", status=status.HTTP_200_OK)
+        else:
+            follow.active = True
+            follow.save()
+            return Response('Unfollow', status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=True)
+    def get_follow(self, request, pk):
+        user = self.get_object()
+
+        f = Follow.objects.filter(follow_with_user=user, active=False)
+
+        return Response(serializers.FollowSerializer(f, many=True).data, status=status.HTTP_200_OK)
+
 
 class HashtagViewSet(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIView):
     queryset = Hashtag.objects.all()
@@ -927,6 +949,27 @@ class ReportViewSet(viewsets.ViewSet, generics.ListAPIView):
 class ReportTypeViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = ReportType.objects.all()
     serializer_class = serializers.ReportTypeSerializer
+
+
+class FollowViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Follow.objects.all()
+    serializer_class = serializers.FollowSerializer
+
+    @action(methods=['GET'], detail=False)
+    def count_follow(self, request):
+        user = int(request.data.get('user_id'))
+
+        follows = Follow.objects.filter(follow_with_user=user, active=False).all().count()
+
+        return Response(follows, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=False)
+    def get_follower(self, request):
+        user = int(request.data.get('user_id'))
+
+        followers = Follow.objects.filter(follow_with_user=user, active=False)
+
+        return Response(serializers.FollowSerializer(followers, many=True).data, status=status.HTTP_200_OK)
 
 
 
