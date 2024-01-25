@@ -25,6 +25,7 @@ class Follow(BaseModel):
     follow_with_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_follow_set')
 
 
+
 class Category(BaseModel):
     name = models.CharField(max_length=100, null=False)
 
@@ -83,7 +84,8 @@ class Report(BaseModel):
 
 class Notice(BaseModel):
     content = RichTextField(null=True)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_query_name="notice")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_query_name="notice", null=True)
+    follow = models.ForeignKey(Follow, on_delete=models.CASCADE, related_name="notice", null=True)
 
 
 class Hashtag(BaseModel):

@@ -89,21 +89,16 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
     def get_by_id(self, request, pk):
         post = self.get_object()
 
-        response_data=[]
-
         get_post = Post.objects.get(pk=post.id)
-
         serializer_post = serializers.PostSerializer(get_post)
 
         get_image = Images.objects.filter(post=post)
         serializer_img = serializers.ImageSerializer(get_image, many=True)
 
         data = serializer_post.data
-        data['image'] = serializer_img.data
+        data['images'] = serializer_img.data
 
-        response_data.append(data)
-
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 
@@ -642,11 +637,28 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         if follow.active:
             follow.active = False
             follow.save()
+            content = f"{request.user.username} đã follow của bạn"
+            n = Notice.objects.create(content=content, follow=follow)
+            n.save()
             return Response("Follow", status=status.HTTP_200_OK)
         else:
             follow.active = True
             follow.save()
             return Response('Unfollow', status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=True, url_path="")
+    def get_by_id(self, request, pk):
+        user = self.get_object()
+        get_user = User.objects.get(pk=user.id)
+        return Response(serializers.UserSerialzier(get_user).data, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=False)
+    def search_user(self, request):
+        search_query = request.query_params.get('name')
+        if not search_query:
+            return Response("Please provide a search query.", status=status.HTTP_400_BAD_REQUEST)
+        users = User.objects.filter(username__icontains=search_query)
+        return Response(serializers.UserSerialzier(users, many=True).data, status=status.HTTP_200_OK)
 
     @action(methods=['GET'], detail=True)
     def get_follow(self, request, pk):
@@ -856,7 +868,16 @@ class NoticeViewSet(viewsets.ViewSet, generics.ListAPIView):
     def get_notice_of_user(self, request):
         user = request.user
         posts = Post.objects.filter(user=user)
-        notices = Notice.objects.filter(post__in=posts).order_by('-created_date')
+        follows = Follow.objects.filter(follow_with_user=user)
+
+        post_notices = Notice.objects.filter(post__in=posts).order_by('-created_date')
+        follow_notices = Notice.objects.filter(follow__in=follows).order_by('-created_date')
+
+        # Combine the two querysets
+        notices = post_notices.union(follow_notices)
+
+        # Order the combined queryset by created_date
+        notices = notices.order_by('-created_date')
 
         serializer = serializers.NoticeSerializer(notices, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -885,7 +906,11 @@ class NoticeViewSet(viewsets.ViewSet, generics.ListAPIView):
         user = request.user
 
         # breakpoint()
-        notices = Notice.objects.filter(post__user=user, active=True)
+        # notices = Notice.objects.filter(post__user=user, active=True)
+        post_notices = Notice.objects.filter(post__user=user, active=True)
+        follow_notices = Notice.objects.filter(follow__follow_with_user=user, active=True)
+
+        notices = post_notices.union(follow_notices)
 
         # serializer_data = serializers.NoticeSerializer(notices, many=True,  context={'request': request}).data
         # response_data = {
@@ -957,7 +982,7 @@ class FollowViewSet(viewsets.ViewSet, generics.ListAPIView):
 
     @action(methods=['GET'], detail=False)
     def count_follow(self, request):
-        user = int(request.data.get('user_id'))
+        user = int(request.query_params.get('user_id'))
 
         follows = Follow.objects.filter(follow_with_user=user, active=False).all().count()
 
@@ -965,7 +990,7 @@ class FollowViewSet(viewsets.ViewSet, generics.ListAPIView):
 
     @action(methods=['GET'], detail=False)
     def get_follower(self, request):
-        user = int(request.data.get('user_id'))
+        user = int(request.query_params.get('user_id'))
 
         followers = Follow.objects.filter(follow_with_user=user, active=False)
 
@@ -973,7 +998,7 @@ class FollowViewSet(viewsets.ViewSet, generics.ListAPIView):
 
     @action(methods=['GET'], detail=False)
     def get_following(self, request):
-        user = int(request.data.get('user_id'))
+        user = int(request.query_params.get('user_id'))
 
         followings = Follow.objects.filter(follower=user, active=False)
 
@@ -981,7 +1006,7 @@ class FollowViewSet(viewsets.ViewSet, generics.ListAPIView):
 
     @action(methods=['GET'], detail=False)
     def count_following(self, request):
-        user = int(request.data.get('user_id'))
+        user = int(request.query_params.get('user_id'))
 
         count = Follow.objects.filter(follower=user, active=False).all().count()
 
