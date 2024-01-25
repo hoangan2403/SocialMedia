@@ -971,8 +971,19 @@ class FollowViewSet(viewsets.ViewSet, generics.ListAPIView):
 
         return Response(serializers.FollowSerializer(followers, many=True).data, status=status.HTTP_200_OK)
 
+    @action(methods=['GET'], detail=False)
+    def get_following(self, request):
+        user = int(request.data.get('user_id'))
 
+        followings = Follow.objects.filter(follower=user, active=False)
 
+        return Response(serializers.FollowSerializer(followings, many=True).data, status=status.HTTP_200_OK)
 
+    @action(methods=['GET'], detail=False)
+    def count_following(self, request):
+        user = int(request.data.get('user_id'))
 
+        count = Follow.objects.filter(follower=user, active=False).all().count()
+
+        return Response(count, status=status.HTTP_200_OK)
 
