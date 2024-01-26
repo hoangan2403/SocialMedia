@@ -607,7 +607,7 @@ class AuctionViewSet(viewsets.ViewSet, generics.ListAPIView):
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True).all()
     serializer_class = serializers.UserSerialzier
-    permission_classes = [perms.OwnerAuthenticated]
+    # permission_classes = [perms.OwnerAuthenticated]
     parser_classes = [parsers.MultiPartParser]
 
     def get_permissions(self):
@@ -667,6 +667,54 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         f = Follow.objects.filter(follow_with_user=user, active=False)
 
         return Response(serializers.FollowSerializer(f, many=True).data, status=status.HTTP_200_OK)
+
+    @action(methods=['POST'], detail=False)
+    def update_avartar(self, request):
+        user = request.user
+        avartar = request.FILES.get('avartar')
+
+
+        if avartar:
+            user.avatar = avartar
+            user.save()
+            return Response(serializers.UserSerialzier(user).data, status=status.HTTP_200_OK)
+        else:
+            return Response("Avartar null", status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['POST'], detail=False)
+    def update_password(self, request):
+        user = request.user
+
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+        new_password_again = request.data.get('new_password_again')
+
+        if not user.check_password(old_password):
+            return Response("Invalid old password", status=status.HTTP_400_BAD_REQUEST)
+
+        if not new_password.__eq__(new_password_again):
+            return Response("The new password patterns do not match", status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response("Password updated successfully", status=status.HTTP_200_OK)
+
+    @action(methods=['POST'], detail=False)
+    def update_info(self,request):
+        user = request.user
+        firstname = request.data.get('firstname')
+        lastname = request.data.get('lastname')
+        email = request.data.get('email')
+
+        if firstname or lastname or email:
+            user.first_name = firstname
+            user.last_name = lastname
+            user.email = email
+            user.save()
+            return Response(serializers.UserSerialzier(user).data, status=status.HTTP_200_OK)
+        else:
+            return Response("Null", status=status.HTTP_400_BAD_REQUEST)
 
 
 class HashtagViewSet(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIView):
