@@ -122,9 +122,7 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
 
         if created:
             for image in images:
-                cloudinary_base_url = "https://res.cloudinary.com/dhcvsbuew/"
-                full_cloudinary_url = f"{cloudinary_base_url}{image}"
-                new_image = Images.objects.create(image=full_cloudinary_url, post=post)
+                new_image = Images.objects.create(image=image, post=post)
                 serializer_img = serializers.ImageSerializer(new_image)
                 image_data.append(serializer_img.data)
 
@@ -133,12 +131,28 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
                 post.post_hashtag.add(new_hashtag)
 
             post.save()
+            # Lấy bài viết mới đăng
+
+            # Lấy danh sách người theo dõi của người đăng bài viết
+            followers = Follow.objects.filter(follow_with_user=post.user)
+            n = NoticeType.objects.get(pk=1)
+
+            # Tạo thông báo cho mỗi người theo dõi
+            for follower in followers:
+                notice_content = f"{request.user.username} đã đăng một bài viết mới: {post.content}"
+
+                Notice.objects.create(
+                    content=notice_content,
+                    user=follower.follower,
+                    noticeType=n
+                )
             serializer_post = serializers.PostSerializer(post)
 
             response_data = {
                 'post': serializer_post.data,
                 'images': image_data,
             }
+
             return Response(response_data, status=status.HTTP_201_CREATED)
         else:
             return Response({'error': 'Post not created'}, status=status.HTTP_400_BAD_REQUEST)
@@ -260,9 +274,9 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         if user != post.user:
             if content:
                 c = Comments.objects.create(user=user, post=post, content=content)
-
+                n = NoticeType.objects.get(pk=3)
                 content = f"{request.user.username} đã bình luận bài viết của bạn "
-                n = Notice.objects.create(content=content, post=post)
+                n = Notice.objects.create(content=content, user=post.user, noticeType=n)
                 n.save()
 
                 return Response(serializers.CommentSerializer(c).data, status=status.HTTP_201_CREATED)
@@ -290,9 +304,10 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         # like = Like.objects.filter(user=user, post=post)
         if user != post.user:
                 like, created = Like.objects.get_or_create(user=user, post=post)
+                n = NoticeType.objects.get(pk=2)
                 if created:
-                    content = f"{request.user.username} đã bày tỏ bài viết của bạn"
-                    n = Notice.objects.create(content=content, post=post)
+                    content = f"{request.user.username} đã thả {like_type_instance.name} bài viết của bạn"
+                    n = Notice.objects.create(content=content, user=post.user, noticeType=n)
                     n.save()
                     like.like_type = like_type_instance
                     like.save()
@@ -637,8 +652,9 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         if follow.active:
             follow.active = False
             follow.save()
+            n = NoticeType.objects.get(pk=4)
             content = f"{request.user.username} đã follow của bạn"
-            n = Notice.objects.create(content=content, follow=follow)
+            n = Notice.objects.create(content=content, user=follow.follow_with_user, noticeType=n)
             n.save()
             return Response("Follow", status=status.HTTP_200_OK)
         else:
@@ -672,7 +688,6 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     def update_avartar(self, request):
         user = request.user
         avartar = request.FILES.get('avartar')
-
 
         if avartar:
             user.avatar = avartar
@@ -857,9 +872,10 @@ class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
             c = Comments.objects.create(content=content, post=comments.post, user=user, comment=comments)
             c.save()
             serializer_comment = serializers.CommentSerializer(c)
+            n = NoticeType.objects.get(pk=5)
             if c:
                 content = f"{request.user.username} đã nhắc đến bạn"
-                n = Notice.objects.create(content=content, post=comment.post)
+                n = Notice.objects.create(content=content, user=comments.user, noticeType=n)
                 n.save()
                 serializer_notice = serializers.NoticeSerializer(n)
 
@@ -915,17 +931,7 @@ class NoticeViewSet(viewsets.ViewSet, generics.ListAPIView):
     @action(methods=['GET'], url_path='get_notice', detail=False)
     def get_notice_of_user(self, request):
         user = request.user
-        posts = Post.objects.filter(user=user)
-        follows = Follow.objects.filter(follow_with_user=user)
-
-        post_notices = Notice.objects.filter(post__in=posts).order_by('-created_date')
-        follow_notices = Notice.objects.filter(follow__in=follows).order_by('-created_date')
-
-        # Combine the two querysets
-        notices = post_notices.union(follow_notices)
-
-        # Order the combined queryset by created_date
-        notices = notices.order_by('-created_date')
+        notices = Notice.objects.filter(user=user).order_by('-created_date')
 
         serializer = serializers.NoticeSerializer(notices, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -954,17 +960,8 @@ class NoticeViewSet(viewsets.ViewSet, generics.ListAPIView):
         user = request.user
 
         # breakpoint()
-        # notices = Notice.objects.filter(post__user=user, active=True)
-        post_notices = Notice.objects.filter(post__user=user, active=True)
-        follow_notices = Notice.objects.filter(follow__follow_with_user=user, active=True)
+        notices = Notice.objects.filter(user=user, active=True)
 
-        notices = post_notices.union(follow_notices)
-
-        # serializer_data = serializers.NoticeSerializer(notices, many=True,  context={'request': request}).data
-        # response_data = {
-        #     'notices': serializer_data,
-        #     'count': notices.count(),
-        # }
         return Response({'count': notices.count()}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
