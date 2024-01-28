@@ -93,6 +93,10 @@ class LikeSerializers(serializers.ModelSerializer):
 
 
 class NoticeSerializer(serializers.ModelSerializer):
+    post = PostSerializer(read_only=True)
+    user = UserSerialzier(read_only=True)
+    user_notice = UserSerialzier(read_only=True)
+
     class Meta:
         model = Notice
         fields = '__all__'

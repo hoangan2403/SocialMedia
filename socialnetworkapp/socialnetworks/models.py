@@ -52,7 +52,7 @@ class Auction(BaseModel):
     product = models.ForeignKey(Product, on_delete=models.RESTRICT, related_query_name='auction', null=True)
     owner = models.ForeignKey(User, related_name='user_of', on_delete=models.CASCADE)
     buyer = models.ForeignKey(User, related_name='user', on_delete=models.CASCADE, null=True)
-    user_care = models.ManyToManyField(User, related_query_name='auction', null=True)
+    user_care = models.ManyToManyField(User, related_query_name='auction', blank=True)
 
 
 class ParticipateAuction(BaseModel):
@@ -65,7 +65,7 @@ class Post(BaseModel):
     content = RichTextField(null=True)
     # image = models.ImageField(upload_to="posts/%Y/%m", null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_query_name='userpost')
-    post_hashtag = models.ManyToManyField('Hashtag', null=True, related_query_name="hashtag")
+    post_hashtag = models.ManyToManyField('Hashtag', blank=True, related_query_name="hashtag")
 
 
 class ReportType(BaseModel):
@@ -91,10 +91,11 @@ class NoticeType(BaseModel):
 
 class Notice(BaseModel):
     content = RichTextField(null=True)
-    # post = models.ForeignKey(Post, on_delete=models.CASCADE, related_query_name="notice", null=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_query_name="notice", null=True)
     # follow = models.ForeignKey(Follow, on_delete=models.CASCADE, related_name="notice", null=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name="user_of_notice")
     noticeType = models.ForeignKey(NoticeType, on_delete=models.CASCADE, null=True)
+    user_notice = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name= "user_notice")
 
 
 class Hashtag(BaseModel):

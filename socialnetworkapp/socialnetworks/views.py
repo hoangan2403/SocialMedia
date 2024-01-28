@@ -144,7 +144,9 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
                 Notice.objects.create(
                     content=notice_content,
                     user=follower.follower,
-                    noticeType=n
+                    noticeType=n,
+                    post=post,
+                    user_notice=post.user
                 )
             serializer_post = serializers.PostSerializer(post)
 
@@ -273,10 +275,10 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         content = request.data.get('content')
         if user != post.user:
             if content:
-                c = Comments.objects.create(user=user, post=post, content=content)
+                c, _ = Comments.objects.get_or_create(user=user, post=post, content=content)
                 n = NoticeType.objects.get(pk=3)
                 content = f"{request.user.username} đã bình luận bài viết của bạn "
-                n = Notice.objects.create(content=content, user=post.user, noticeType=n)
+                n = Notice.objects.create(content=content, user=post.user, noticeType=n, post=post, user_notice=c.user)
                 n.save()
 
                 return Response(serializers.CommentSerializer(c).data, status=status.HTTP_201_CREATED)
@@ -295,7 +297,6 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         like_type = int(request.data.get('liketype_id'))
         user = request.user
         post = self.get_object()
-
         try:
             like_type_instance = LikeType.objects.get(pk=like_type)
         except LikeType.DoesNotExist:
@@ -307,7 +308,7 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
                 n = NoticeType.objects.get(pk=2)
                 if created:
                     content = f"{request.user.username} đã thả {like_type_instance.name} bài viết của bạn"
-                    n = Notice.objects.create(content=content, user=post.user, noticeType=n)
+                    n = Notice.objects.create(content=content, user=post.user, noticeType=n, post=post, user_notice=like.user)
                     n.save()
                     like.like_type = like_type_instance
                     like.save()
@@ -654,7 +655,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
             follow.save()
             n = NoticeType.objects.get(pk=4)
             content = f"{request.user.username} đã follow của bạn"
-            n = Notice.objects.create(content=content, user=follow.follow_with_user, noticeType=n)
+            n = Notice.objects.create(content=content, user=follow.follow_with_user, noticeType=n, user_notice=follow.follower)
             n.save()
             return Response("Follow", status=status.HTTP_200_OK)
         else:
@@ -869,13 +870,13 @@ class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
         # breakpoint()
 
         if content:
-            c = Comments.objects.create(content=content, post=comments.post, user=user, comment=comments)
+            c, _ = Comments.objects.get_or_create(content=content, post=comments.post, user=user, comment=comments)
             c.save()
             serializer_comment = serializers.CommentSerializer(c)
             n = NoticeType.objects.get(pk=5)
             if c:
                 content = f"{request.user.username} đã nhắc đến bạn"
-                n = Notice.objects.create(content=content, user=comments.user, noticeType=n)
+                n = Notice.objects.create(content=content, user=comments.user, noticeType=n, post=comments.post, user_notice=c.user)
                 n.save()
                 serializer_notice = serializers.NoticeSerializer(n)
 
