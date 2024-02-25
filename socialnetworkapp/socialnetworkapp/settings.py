@@ -236,6 +236,7 @@ cloudinary.config(
 
 
 MIDDLEWARE = [
+    'socialnetworks.middleware.OAuthMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -250,6 +251,12 @@ import pymysql
 pymysql.install_as_MySQLdb()
 
 ROOT_URLCONF = 'socialnetworkapp.urls'
+
+PAYPAL_MODE = 'sandbox'  # Chế độ sandbox hoặc live
+PAYPAL_CLIENT_ID = 'AffgJPXuyZM4uvZ8CITlIoI9ne6vXNF83wNhdeBG6EQaCDn8Sgzlr_ZnFdqvDuN7crOSfKj8VcRLWF2U'
+PAYPAL_SECRET = 'EIgvnSpioK_vo2Z48R8SzptULJUhJqBvYrXEKQetuQZr09rUHwqpvFIWtHi7g0ctAtQHR0xBJNZtqKh-'
+PAYPAL_RECEIVER_EMAIL = 'trinhbaoduy.26012019@gmail.com'
+PAYPAL_TEST = True
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'

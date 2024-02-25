@@ -2,8 +2,7 @@
 
 from django.urls import path, include
 from rest_framework import routers
-from socialnetworks import views
-
+from socialnetworks import views, paypal
 
 router = routers.DefaultRouter()
 router.register('posts', views.PostViewSet, basename='posts')
@@ -22,5 +21,6 @@ router.register('follows', views.FollowViewSet, basename='follows')
 
 urlpatterns = [
     path('', include(router.urls)),
-
+    path('create_payment/', paypal.create_payment),
+    path('capture_payment/', paypal.capture_payment),
 ]

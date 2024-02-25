@@ -70,11 +70,10 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
     #         return [perms.OwnerAuthenticated()]
 
     # pagination_class = paginators.PostPaginator
-    # def get_permissions(self):
-    #     if self.action in ('get_serializer_class', 'add_comment', 'like', 'update_post'):
-    #         return [permissions.IsAuthenticated()]
-    #
-    #     return [permissions.AllowAny()]
+    def get_permissions(self):
+        if self.action in ('update_post', 'destroy', 'update_post_hashtag'):
+            return [perms.PostOwner()]
+        return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
         queries = self.queryset
@@ -99,7 +98,6 @@ class PostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView
         data['images'] = serializer_img.data
 
         return Response(data, status=status.HTTP_200_OK)
-
 
 
     # Đăng bài viêt
@@ -752,6 +750,7 @@ class ImageViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIVi
     serializer_class = serializers.ImageSerializer
     parser_classes = [parsers.MultiPartParser]
     # permission_classes = [perms.OwnerAuthenticated]
+
 
     @swagger_auto_schema(
         operation_description="Push Images House",
